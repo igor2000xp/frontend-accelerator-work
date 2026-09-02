@@ -1445,3 +1445,123 @@ Verification Record above.
     exist but are still empty.
   - `src/features/home/` does not exist, so no in-repo example feature was available as a model.
   - `<add remaining limitations after review and verification>`
+
+## Project Audit — 2026-09-02
+
+Read-only technical audit performed at `2026-09-02T19:29+00:00`, requested as a coordinator-level
+status check against `ai/context/`, `tasks/`, `training/frontend-accelerator-assessment/`, and the
+live codebase. No files were modified to produce this section; the four quality-gate commands
+below were re-run live to confirm the claims already recorded in
+[`current-work.md`](../../ai/context/current-work.md) rather than to change anything.
+
+### 1. Overall Status And Metrics
+
+- Phase: onboarding task `task-001-onboarding-sessions` is delivered and reviewed; the repository
+  is idle between that closed task and the assessment-scope work described as `Next`.
+- Active branch: `dev/dev-05-phase-coder-03`, latest commit `5cfa295` (`docs: initialize AI
+  context documentation and update project architecture documentation...`). `current-work.md`
+  itself still points at `d53b662` as "Latest commit" — one commit behind HEAD; see §5.
+- Quality gates, re-verified live rather than taken on trust:
+  - `npm run lint` — Biome, `66 files`, `0` errors / `0` warnings.
+  - `npm run typecheck` — `tsc -b --noEmit`, clean, no output.
+  - `npm run test` — `15` test files, `92` tests, all passing.
+  - `npm run build` was not re-run in this audit (previously recorded as passing in
+    [`workflow-log.md:1398`](#) with `132` modules, `382.68 kB` JS / `12.92 kB` CSS); the other
+    three gates match `current-work.md`'s claim exactly.
+
+### 2. Completed Scope
+
+- `task-001-onboarding-sessions` — "Sessions workspace: list, filter, create." Closed with
+  `code-reviewer` verdict `PASS` (zero blocking / should-fix findings) and `browser-verify`
+  confirming every browser-observable acceptance criterion, including the `F-01` retry-latch fix
+  landed in commit `d53b662`.
+- Implemented functionality, confirmed directly in `src/`:
+  - Route `/sessions` (child of the root layout in [`router.tsx`](../../src/app/router.tsx)); `/`
+    redirects to it via a loader (`redirect("/sessions")`), matching decision D-04.
+  - List view ([`SessionsList.tsx`](../../src/features/sessions/ui/SessionsList.tsx),
+    [`SessionsListSection.tsx`](../../src/features/sessions/ui/SessionsListSection.tsx)) with
+    loading (`role="status"`), error+retry (`role="alert"`), empty, and populated states.
+  - Status filter ([`StatusFilter.tsx`](../../src/features/sessions/ui/StatusFilter.tsx)) — **only
+    two options exist**: `All` and `Scheduled` (`FILTER_STATUS = "scheduled"`, D-01). No `full`,
+    `cancelled`, or `completed` option is rendered anywhere in the UI. The active filter is
+    mirrored into `?status=` via `useSearchParams` in
+    [`SessionsWorkspacePage.tsx`](../../src/features/sessions/ui/SessionsWorkspacePage.tsx).
+  - Create form ([`CreateSessionForm.tsx`](../../src/features/sessions/ui/CreateSessionForm.tsx))
+    — title (trimmed 3–80 chars) and `datetime-local` start time (must be strictly future),
+    inline `aria-invalid`/`aria-describedby` validation, submit disabled while pending. The seven
+    remaining `CreateSessionRequest` fields are supplied by
+    [`create-session.ts`](../../src/features/sessions/model/create-session.ts)'s
+    `CREATE_SESSION_DEFAULTS` (D-02); no `search` input exists in the codebase (confirmed by
+    `grep` — the only `search` hit in that file is the `useSearchParams` hook, not a text filter).
+  - i18n: namespace `sessions` (`list`, `filter`, `status`, `form` keys) plus `common`, complete in
+    both `src/shared/i18n/locales/en/` and `.../ru/`, with
+    [`sessions-namespace.test.ts`](../../src/shared/i18n/sessions-namespace.test.ts) guarding key
+    parity.
+- Architecture layers touched: `src/features/sessions/` (`ui/` + `model/` + `index.ts` barrel),
+  `src/services/api/endpoints/sessions.ts` + `sessions.types.ts` (typed wrappers, `AbortSignal`
+  forwarded), `src/mocks/` (`handlers.ts`, `db/sessions-db.ts`, `data/sessions.seed.ts`,
+  `scenario.ts` for the `?mock=` switch), `src/shared/i18n/`. No `src/shared/ui/` primitives exist
+  yet (plain Tailwind elements only) — matches the "Open Items" note in `current-work.md`.
+
+### 3. Active Streams And Blockers
+
+- No task folder or role artifact currently shows in-progress work — `tasks/` contains exactly one
+  directory, `task-001-onboarding-sessions`, and its `workflow-log.md` ends in a `## Completion`
+  section with known limitations, not an open next-step. There is no `task-002` (or similarly
+  named) folder for the assessment-scope work described as `Next`.
+- Recorded blockers/debt, all non-blocking by design:
+  - `list-error-once` mock scenario fails every request inside a `500ms` attempt window (not just
+    the first) so a React StrictMode double-mount cannot consume the single scripted failure — a
+    retry inside that window fails once more before succeeding (documented dead zone `N-01`).
+  - Create failure is silent by design (D-06, AC-22 dropped): a failed `POST /api/sessions` shows
+    no user-facing message; only the pending-state guardrail (submit always re-enables) is
+    guaranteed.
+  - `datetime-local` decomposes into per-unit spinbuttons in Chrome's accessibility tree, so
+    `getByLabelText` behavior proven in jsdom tests does not carry the same guarantee in a real
+    browser (the visible `<label for>` association still works).
+  - Mock store is module-scoped in memory; a browser reload discards any session created at
+    runtime and restores the seed.
+  - Seed sessions `ses_101`–`ses_103` are dated mid-2027 and the assertions in
+    `sessions.seed.test.ts` will need new dates after August 2027.
+
+### 4. Upcoming Scope And Roadmap
+
+- `Next` (per both `current-work.md` and `product.md`), sourced from
+  `training/frontend-accelerator-assessment/FRONTEND_ASSESSMENT_SPEC.md`: search by title/coach/
+  location, all four status filters (`scheduled`, `full`, `cancelled`, `completed`), and a session
+  details side drawer. None of the three exist in `src/` today — confirmed by direct `grep`
+  (`StatusFilter.tsx` renders exactly two `<option>`s; no details route or drawer component exists
+  anywhere under `src/features/sessions/`).
+  - The API contract for the details view is partially pre-typed: `SessionDetails` is already
+    defined in
+    [`sessions.types.ts`](../../src/services/api/endpoints/sessions.types.ts) and is the type
+    returned by `createSession`'s response, but no `GET` details endpoint wrapper, no MSW handler
+    for a single-session fetch, and no route/drawer UI is wired — this is scaffolding for future
+    work, not a partially built feature.
+- `Later` (`product.md`, "Optional Extensions"): pagination and optimistic updates. URL parameter
+  sync is explicitly *not* deferred anymore — the status filter already round-trips through
+  `?status=`.
+- Non-Goals (`product.md`, unchanged, none contradicted by current code): real backend/database,
+  authentication/roles/registration, drag-and-drop calendars or attendee enrollment, financial
+  transactions or real email sending.
+
+### 5. Memory Sync Check
+
+- `ai/context/current-work.md`'s "Latest commit: `d53b662`" line is stale by one commit — HEAD is
+  now `5cfa295` (a docs-only commit per its message, so no code drift is implied, but the pointer
+  itself is out of date).
+- `ai/context/features/sessions.md` (the sessions feature passport) matches the code closely:
+  module layout, API dependency table, state-ownership table, and the "Not Implemented Here"
+  section (search, three remaining filters, details drawer, pagination, optimistic updates) all
+  check out against `src/features/sessions/` as read. No divergence found.
+- Confirmed absent, as `current-work.md` itself already documents: `ai/context/roadmap.md` and
+  `ai/context/decisions/` do not exist — the Now/Next/Later list lives only in `product.md` and
+  per-task decisions only in each task's `workflow-log.md`. `ai/recipes/` and `ai/prompts/` exist
+  as empty directories.
+- `tasks/` holds a single task folder; there is no `ai/context/tasks/task-001-sessions-workspace.md`
+  file despite `task.md:9` referencing it as "a separate, larger brief" to explicitly not merge
+  into this one scope — that referenced path does not exist in the repository, so either it was
+  never created or the reference itself is stale.
+- No `decisions.md`/ADR log exists outside the six `D-01`..`D-06` entries recorded inline in
+  `tasks/task-001-onboarding-sessions/workflow-log.md` — acceptable per the project's own
+  documented convention, not a gap.
