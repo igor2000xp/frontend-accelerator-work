@@ -1565,3 +1565,49 @@ below were re-run live to confirm the claims already recorded in
 - No `decisions.md`/ADR log exists outside the six `D-01`..`D-06` entries recorded inline in
   `tasks/task-001-onboarding-sessions/workflow-log.md` — acceptable per the project's own
   documented convention, not a gap.
+
+### Coder Task Recommendations
+
+Follow-on from the audit above, in response to "which tasks do I need to give to the coders."
+Based on §4 of this audit and
+`training/frontend-accelerator-assessment/FRONTEND_ASSESSMENT_SPEC.md`, the remaining scope maps
+onto three coder-facing tasks, each intended to run through the repository's own
+`requirements-analyst -> writing-plans -> coder -> code-reviewer -> verify` sequence in its own
+`tasks/task-00N-*/` folder (no such folders exist yet; see §3 of the audit above).
+
+1. **`task-002` — Search and full status filtering.** Lowest risk: extends the existing feature
+   module, adds no new route. Scope: a search input over title/coach/location wired to
+   `GET /api/sessions` query params; the three missing status options (`full`, `cancelled`,
+   `completed`) in [`StatusFilter.tsx`](../../src/features/sessions/ui/StatusFilter.tsx), which
+   today renders only `All`/`Scheduled`; a "clear all filters" action; and non-color status
+   distinction (`FRONTEND_ASSESSMENT_SPEC.md` §1 requires this explicitly). Touches only
+   `sessions-query.ts`, `StatusFilter.tsx`, `SessionsList.tsx` — same feature module, same layer.
+
+2. **`task-003` — Session details view.** Wires the two contract endpoints that exist but are
+   unused, `GET /api/sessions/:sessionId` and `GET /api/coaches` (`SessionDetails` is already
+   typed in `sessions.types.ts` but nothing reads it yet). Needs a drawer/route/modal that is
+   keyboard-accessible, deep-linkable, and returns the user to the prior list state — filter,
+   search, and scroll position preserved, per the "Context preservation" JTBD in `product.md`.
+   Adds two new UI states: details-request-fail and coaches-request-fail.
+
+3. **`task-004` — Expand Create Session to the full contract.** The current form collects only
+   title and start time; the remaining seven `CreateSessionRequest` fields are fixed defaults from
+   D-02 (`CREATE_SESSION_DEFAULTS` in
+   [`create-session.ts`](../../src/features/sessions/model/create-session.ts)). The assessment
+   spec §3 requires user-entered session type, duration (30-240 min), coach select, location name
+   and address, capacity (1-100), visibility, and optional description/notes — a materially larger
+   form. It also reverses two task-001 decisions: D-06 (silent create failure) becomes a required
+   form-level error message, and D-02 (fixed defaults) becomes user input, so this needs its own
+   decision record rather than a patch to the existing one.
+
+Two open decisions flagged as worth settling before `task-002`'s `requirements-analyst` step
+starts, not yet resolved anywhere in `ai/context/` or a task folder:
+
+- The assessment spec states "introducing i18n is out of scope," while `AGENTS.md` mandates i18n
+  for all UI text and it is already wired throughout `src/`. Read as "don't add new i18n
+  infrastructure," not "stop using what already exists," but this has not been recorded as a
+  decision anywhere.
+- The spec's Fixture Clock Policy expects fixture timestamps rebased at mock startup against
+  `training/frontend-accelerator-assessment/fixtures/fixture-clock.json`; task-001's D-03
+  explicitly deferred that in favor of static future-dated seeds. `task-002` (search/filter) does
+  not force this question, but `task-003`'s `created`/`last-updated` detail timestamps likely will.
