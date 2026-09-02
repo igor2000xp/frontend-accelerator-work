@@ -40,6 +40,12 @@ Doctor evidence at start: `training/frontend-accelerator-onboarding/workflow-log
 | `2026-09-02T19:23+02:00` | `coder` (log correction) | `After completing the command, stop it and log the action in the workflow-log.md file.` | Verified that the remediation pass had already STOPped and been recorded, then found and fixed a defect in this log: the `api-integration` revision 2 row and record were stamped `19:05`, placing the contract amendment after the `18:55` coder pass that implements it. Restamped to the evidence-backed range `18:40-18:53` (first review `18:37`; remediation Vitest `Start at 18:54:09`). Documentation-only; no source file, contract, or verdict touched. Recorded as correction 4 below. | `pending developer review` | `developer go-ahead, then re-dispatch coder for T2 (src/mocks/scenario.ts)` |
 | `2026-09-02T19:34+02:00` | `verify` (T1-T2, T7-T9 pass) | `Launch the command 'verify' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Four applicable project-defined checks run read-only from the Application Root against clean tree `1dababc`: `npm run lint`, `npm run typecheck`, `npm run test` (6 files, 44 tests), `npm run build` — every one exits `0`. `npm run format` and `lint:fix` excluded as state-writing; e2e `NOT-APPLICABLE` (no Playwright/Cypress config). Tree byte-identical after the run. Scope caveat: the verdict evidences no sessions acceptance criterion — `handlers.ts` is still an empty array and the router index renders `null`. No failure repaired, no dependency installed, no file edited. Role STOPped after the verdict. | `pending developer review` | `coder` for T3-T6 (MSW handlers + seed), then T10-T14 (routed workspace) |
 | `2026-09-02T19:44+02:00` | `code-reviewer` (T2, T9 pass) | `/code-reviewer Launch the command '/code-review' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Bounded read-only review of `340100a..b521743` restricted to `src/` (4 files: `scenario.ts`, `scenario.test.ts`, `create-session.ts`, `create-session.test.ts`, 255 insertions). Validated `MockScenario` definitions, URL search param reading, `shouldFailListRequest` latching, canned error bodies, `validateCreateSessionForm` (AC-15/AC-16/AC-17), `buildCreateSessionRequest` (A-04, D-02), and `hasFormErrors`. Zero blocking or should-fix defects. All four project gates pass (44/44 tests). Role STOPped. | `pending developer review` | `coder` for T3-T6 (MSW handlers, seed, in-memory store) then T10-T14 (routed workspace UI) |
+| `2026-09-02T20:00+02:00` | `coder` (T3-T6, T10-T14 pass) | `Coder prompt for T3-T6 mock boundary and T10-T14 routed workspace` | 17 files created, 3 modified, 1 deleted. Handlers, store, seed, API wrappers, React Query hooks, UI components, and 44 tests implemented. 88 tests total. One TDD cycle per task. All gates pass. Role STOPped. | `pending developer review` | `verify` and `browser-verify` |
+| `2026-09-02T20:06+02:00` | `verify` (T3-T6, T10-T14 pass) | `Launch the command 'verify' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Four applicable checks run read-only against committed tree `f10cac8`: `lint`, `typecheck`, `test` (15 files, 88 tests), `build` all pass. Unverified: browser behavior, scenario switch, SW registration. Role STOPped. | `pending developer review` | `browser-verify` |
+| `2026-09-02T20:15+02:00` | `browser-verify` (T3-T6, T10-T14 pass) | `Launch the command 'browser-verify' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Split verdict: **FAIL** on F-01 (`?mock=list-error-once` latch consumed by React StrictMode double mount before paint; AC-05 retry unreachable in browser), **PASS** on all other browser-observable ACs (list, filter, create, loading, empty, error copy, D-04 redirect, D-06 guardrail, mobile 375x812, tab order). Role STOPped. | `pending developer review` | `coder` for F-01 fix |
+| `2026-09-02T20:37+02:00` | `coder` (F-01 fix) | `Fix F-01 list-error-once attempt window` | `src/mocks/scenario.ts` attempt window (`LIST_ERROR_ONCE_ATTEMPT_MS = 500`) implemented; 5 unit tests added in `src/mocks/scenario.test.ts` (92 tests total). Proven in real browser: `500` -> error state -> `Try again` -> `200` -> 5 rows. Role STOPped. | `pending developer review` | `browser-verify` for independent re-check |
+| `2026-09-02T20:45+02:00` | `browser-verify` (F-01 re-check) | `Launch the command 'browser-verify' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. F-01 verified closed across 3/3 loads. Full regression sweep passed in real browser (desktop 1280x900, mobile 375x812). Measured retry dead zone ~500ms (self-correcting on next click). Role STOPped. | `pending developer review` | `code-reviewer` |
+| `2026-09-02T20:54+02:00` | `code-reviewer` (full workspace implementation & F-01 fix) | `/code-reviewer Launch the command '/code-review' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Bounded read-only review of `b521743..working tree` restricted to `src/` (27 files, 1477 insertions, 6 deletions, plus F-01 scenario window update). Verified compliance with AC-01..AC-27 (AC-22 dropped), ED layer rules, zero hardcoded strings, no unauthorized hooks/dependencies. All four quality gates pass cleanly (92/92 tests, lint, typecheck, build). Residual non-blocking items noted. Role STOPped. | `pending developer review` | `docs-generator` / `finishing-branch` |
 
 Add one row for each role invocation or important correction. Preserve each prompt exactly, but do
 not copy full role responses into this file.
@@ -992,12 +998,440 @@ exposed a specialist problem and no decision was left unresolved. Per the Stop C
 does not invoke the next command. The natural next steps are the developer's commits, then
 `browser-verify` for the manual observation and `verify` / `code-reviewer` for T15's gates.
 
+### Verification Record — `verify` role, T3-T6 and T10-T14 pass
+
+Verified `2026-09-02T20:06+02:00`, read-only. No file was created, edited, or repaired; no
+dependency installed and no configuration touched. Rulesets loaded: `rulesets/common/verify` and
+`rulesets/framework/verify`.
+
+**Context resolution.** One frontend application, no monorepo: a single `package.json` at the
+Repository Root and no nested manifest. `package-lock.json` is the only lockfile, so the package
+manager is **npm**, matching the AGENTS.md non-negotiable. Application Root = Repository Root; no
+selection was required.
+
+**Surface verified.** Commit `f10cac8` — "feat: implement sessions feature module with CRUD
+operations, status filtering, and associated testing infrastructure", 27 files, 1477 insertions,
+6 deletions. The working tree is **clean**: `git status --short` is empty and there are zero
+untracked files, so the checks below ran against exactly the committed state, with nothing
+uncommitted inflating or masking the result.
+
+**Verdict: `PASS`** — every applicable check the repository defines exits `0`.
+
+| Check | Command | Exit | Decisive output |
+| --- | --- | --- | --- |
+| Format + lint | `npm run lint` (`biome check .`) | `0` | `Checked 66 files in 57ms. No fixes applied.` |
+| Typecheck | `npm run typecheck` (`tsc -b --noEmit`) | `0` | no diagnostics |
+| Tests | `npm run test` (`vitest run`) | `0` | `Test Files 15 passed (15)` / `Tests 88 passed (88)` |
+| Build | `npm run build` (`tsc -b && vite build`) | `0` | `✓ 132 modules transformed`, `✓ built in 846ms`; `dist/assets/index-DiVBwHjC.js 382.68 kB │ gzip: 122.31 kB` |
+
+Biome is the single formatter and linter here, so `npm run lint` is both gates; `format` and
+`lint:fix` were **not** run — they write, and this role does not modify the tree.
+
+**Not applicable.** No end-to-end tooling exists in the repository (no Playwright or Cypress
+configuration, no `e2e/` directory), so there is no e2e check to select. `dev` and `preview` are
+long-running servers, not checks. `test:watch` is the interactive form of a check already run.
+
+**What this `PASS` does and does not evidence.** It evidences that the committed sessions feature
+compiles, lints, builds, and satisfies its own 88 assertions across 15 files — this time including
+the routed workspace, which the previous `PASS` at `19:34` explicitly could not claim. `/sessions`
+now exists and the suite exercises the list, filter, and create flows through the real router and
+the real MSW boundary.
+
+It does **not** evidence anything observed in a real browser. This role runs the project's checks;
+it does not start `npm run dev` and does not drive a page. Three things therefore remain unverified
+by evidence, unchanged from the `coder` record above:
+
+* The `?mock=` scenario switch reads `window.location.search` on the *page*, which a Vitest memory
+  router never sets. Every scenario branch in `src/mocks/handlers.ts` other than the default path is
+  reached in tests only through `server.use(...)` overrides, never through `currentScenario()`.
+* The service worker registration path (`src/mocks/browser.ts`, `public/mockServiceWorker.js`) is
+  not exercised by the node-side MSW server the tests use.
+* Rendered layout, focus order, and contrast are outside a headless assertion suite.
+
+`browser-verify` is applicable for the first time and is the role that closes those three.
+
+**Known time bomb, not a current failure.** `src/mocks/data/sessions.seed.test.ts` asserts that the
+`scheduled` and `full` seed rows sit in the future. That assertion is true today and becomes false
+after `2027-08-03`, at which point this same `PASS` turns into a `FAIL` with no code change. It is
+the accepted consequence of D-03 and is recorded here so a future run is not misdiagnosed.
+
+**Stop.** The verdict stands as reported. Per the Stop Contract this role repairs nothing and does
+not invoke the next command.
+
+### Browser Verification Record — `browser-verify` role, T3-T6 / T10-T14 pass
+
+Verified `2026-09-02T20:15+02:00`. No production file, test, configuration, or fixture was edited.
+Rulesets loaded: `rulesets/common/browser-verify` and `rulesets/framework/browser-verify`.
+
+**Readiness gate.** `node toolchain/bin/doctor.mjs --json` -> `"status": "READY"`; every check `PASS`,
+including `capability:browser` (`agent-browser@0.32.3`), `node` (24.18.0), and `hooks:claude`
+(`ACTIVE`). The adapter's own `doctor` was not used as the launch step; the session's first adapter
+command was `open`, per the skill.
+
+**Server ownership — nothing started, nothing stopped.** A Vite process was already listening on
+`[::1]:5173`; `ps` confirms it is this repository's own server
+(`node .../frontend-accelerator-work/node_modules/.bin/vite`), serving `<title>Training Sessions
+Workspace</title>` and `/mockServiceWorker.js` with `200`. It is the developer's process, so this
+role reused it and **did not** request approval to start one, did not restart it, and did not stop
+it — it is still listening at PID `36721` after the session closed. The only process this role owned
+was the browser session `t001-sessions-verify`, closed with `close` at the end.
+
+Session name: `t001-sessions-verify`. Viewports: **1280x900** desktop and **375x812** mobile.
+
+**Verdict: `FAIL`** — one documented behavior does not hold in a real browser. Every acceptance
+criterion that is browser-observable passed; the failure is scoped precisely in F-01 below and is
+**not** a defect in the feature's production code.
+
+#### What passed, with evidence
+
+| Path | URL | Evidence |
+| --- | --- | --- |
+| List renders through the real service worker | `/sessions` | MSW console `[MSW] 20:11:50 GET /api/sessions (200 OK)`; five `<li>` rows in the store's deterministic order `ses_105, ses_104, ses_101, ses_102, ses_103` |
+| AC-07 status as a word, not colour | `/sessions` | Rendered text `Completed`, `Cancelled`, `Scheduled`, `Full` |
+| AC-02 local-time conversion | `/sessions` | `2027-08-03T16:00:00Z` renders `Aug 3, 2027, 6:00 PM` — a real UTC+2 conversion, which jsdom under a fixed TZ cannot evidence the same way |
+| AC-08..AC-11 filter | `/sessions?status=scheduled` | `select` -> browser URL becomes `?status=scheduled`, `GET /api/sessions?status=scheduled 200`, list drops to two rows, `Scheduled` stays selected |
+| AC-14/15/17/19 validation blocks the request | `/sessions` | Empty submit renders both messages and the network log shows **no POST at all** |
+| AC-18 messages clear live | `/sessions` | After filling both fields the two messages disappear with no re-submit |
+| AC-16/AC-20/AC-21 create | `/sessions?status=scheduled` | `POST /api/sessions 201` -> `GET /api/sessions?status=scheduled 200` -> row `Morning Shooting Block` appears **trimmed** from `"  Morning Shooting Block  "`, form unmounted, filter still `Scheduled`, three rows |
+| AC-03 loading | `?mock=slow` | `Loading sessions…` observed, then the five rows |
+| AC-06 empty | `?mock=empty` | `No training sessions yet.`, no alert |
+| AC-04 error copy | `?mock=list-error` | `GET /api/sessions 500` -> `Training sessions could not be loaded.` + `Try again`; **no `500` and no `SESSIONS_UNAVAILABLE` leaked into the page** |
+| D-04 index redirect | `/` | Address bar settles on `http://localhost:5173/sessions` |
+| D-06 create-failure guardrail | `?mock=create-error` | `POST /api/sessions 500` -> form stays open, `Title` still holds `Broken Create Probe`, submit `is enabled -> true`, no error message anywhere (AC-22 is dropped by design) |
+| Console and page errors | all of the above | `errors` empty on every page. `console` carries only Vite HMR, the React DevTools hint, and MSW's own request log — no warning or error from application code |
+| Mobile 375x812 | `/sessions` | `scrollWidth 375 === clientWidth 375`, no horizontal overflow; screenshot shows the header, filter, `New session`, and five readable cards stacked |
+| Keyboard | `/sessions` | `Tab` reaches the `Status` `select`, then the `New session` button, in visual order |
+
+#### F-01 (the failure) — `?mock=list-error-once` cannot show the recovery it documents
+
+`api-integration.md` section 12 instructs: "Open `http://localhost:5173/sessions?mock=list-error-once`
+to see the error state and then a successful retry (**AC-04 + AC-05 in one page load**)."
+
+**Observed instead:** the page loads straight into a fully rendered five-row list. The error state
+never paints, and there is nothing to click `Try again` on.
+
+**Evidence — two requests on a single page load:**
+
+```
+[45419.167] GET http://localhost:5173/api/sessions (Fetch)
+[45419.168] GET http://localhost:5173/api/sessions (Fetch) 200
+[MSW] 20:13:59 GET /api/sessions (500 Internal Server Error)
+[MSW] 20:13:59 GET /api/sessions (200 OK)
+```
+
+**Cause, stated with its evidence rather than as certainty.** `src/main.tsx:18` wraps `<App />` in
+`<StrictMode>`, and React double-invokes mount effects in development. Every scenario measured shows
+exactly **two** `GET /api/sessions` per page load — two `200`s under `normal`, two `500`s under
+`list-error`, and under `list-error-once` a `500` followed by a `200`. The one-shot latch
+`listErrorOnceUsed` in `src/mocks/scenario.ts` is therefore consumed by the first, discarded mount,
+and the mount the user actually sees gets the success path.
+
+**Why this matters beyond the one scenario.** It leaves **AC-05 — a recoverable error, where the
+retry succeeds — with no browser-observable path at all**: `list-error` fails every request, so its
+`Try again` can never recover, and `list-error-once` burns its latch before paint. AC-05 remains
+covered by the automated suite (`SessionsWorkspacePage.list.test.tsx` drives it with a
+`server.use(..., { once: true })` override and clicks `Try again`), and a jsdom render is not wrapped
+in `StrictMode`, which is exactly why the suite is green while the browser is not. Note also that
+`src/main.tsx` starts the worker only under `import.meta.env.DEV`, so there is no production mode in
+which the scenario would behave differently — the switch exists only where the double-mount exists.
+
+**Not repaired.** This role does not edit source, and the Stop Contract forbids repairing a failure.
+The fix is a `coder` decision between resetting the latch per query-mount, having the handler count
+only the first *rendered* request, or dropping the scenario and documenting `server.use` as the only
+AC-05 demonstration. No option is chosen here.
+
+#### Observations, non-blocking, no change requested
+
+* **`datetime-local` has no single accessible name in Chrome.** The AX tree decomposes it into
+  `spinbutton "Day Day" / "Month Month" / "Year Year" / "Hours Hours" / "Minutes Minutes"` plus
+  `button "Show local date and time picker"`; the string `Start date and time` is present as the
+  visible `<label>` and works for click and focus, but it is not the control's accessible name the
+  way `screen.getByLabelText("Start date and time")` implies in jsdom. Native control behaviour, not
+  a markup defect — recorded because the test name suggests a guarantee the browser does not give.
+* **The `New session` button is not inside the create form's landmark.** It sits in the header and
+  toggles a sibling `<form>`; focus is not moved into the form on open. Nothing in scope requires it.
+* **The mock store resets on every page reload**, so a session created in the browser vanishes on
+  refresh. Correct for module-scoped state and consistent with `resetSessionsDb` in tests, but worth
+  knowing before demonstrating the flow.
+
+**Stop.** Evidence and verdict are reported, the owned browser session is closed, and the
+developer's dev server was left running and untouched. Per the Stop Contract this role does not
+repair the failure and does not invoke the next command.
+
+### Coder Record — F-01 fix, the `list-error-once` attempt window
+
+Implemented `2026-09-02T20:37+02:00`. Two files changed, both inside `src/mocks/`. Rulesets loaded:
+`rulesets/common/coder` (TypeScript And Project Fit, Essential Behavior Tests) and
+`rulesets/framework/coder` — whose React sections do **not** apply: this pass touches no component,
+hook, state, or effect. No documentation lookup was needed, so no `ctx7` call was made and no
+documentation evidence is claimed. Commits left to the developer, as before.
+
+**The decision, and why it was a `coder` call rather than a specialist's.** `browser-verify` left
+three options open. The required *behavior* was never open — `api-integration.md` section 12 fixes
+it: `?mock=list-error-once` must show "the error state and then a successful retry (AC-04 + AC-05
+in one page load)". Only the mechanism was undecided, and it lives entirely inside the mock
+boundary: no contract, no route, no component, and no public type changes. So no architecture or
+API decision was pending and nothing was guessed.
+
+**Why a time window, and not a counter.** The boundary cannot distinguish a React development
+remount from the user pressing `Try again`: both are byte-identical `GET /api/sessions`, same URL,
+same headers, no body. The only property that separates them is elapsed time — a remount arrives
+within milliseconds, a person reading an error and clicking a button cannot. Failing the first two
+requests instead would have hard-coded React's current dev double-mount, silently breaking if
+`StrictMode` were removed or if React changed how many times it re-invokes mount effects. So
+`list-error-once` now means "the first **attempt** fails", where an attempt is a
+`LIST_ERROR_ONCE_ATTEMPT_MS = 500` window opened by the first request, not "the first **request**
+fails".
+
+**`src/mocks/scenario.ts`.** `listErrorOnceUsed: boolean` becomes
+`listErrorOnceStartedAt: number | null`. `shouldFailListRequest` takes an injected
+`now: number = Date.now()` — the same optional-clock shape `isFutureLocalDateTime` already uses in
+this repository, so the rule is testable without fake timers and the single call site in
+`handlers.ts` is unchanged. `list-error` still short-circuits to `true` before the window logic, so
+it never opens the window and never recovers. `resetListErrorOnce()` is exported for within-file
+test isolation only, mirroring the existing `resetSessionsDb()` convention; it is deliberately
+**not** re-exported through `src/test/msw.ts`, because the only consumer is the colocated
+`src/mocks/scenario.test.ts` and nothing under the four layers needs it.
+
+**Tests — `src/mocks/scenario.test.ts`, one replaced by five.** The old
+"fails only the first list request" case asserted exactly the broken semantics and could not be kept.
+Its replacements pin the contract from both sides: the first request fails; a repeat at `+5ms` and
+at `+499ms` **still** fails (the regression itself — a carried comment records why); `+500ms` and
+`+9s` succeed; the window opens at the first *request* rather than at module load; and an
+intervening `normal` / `list-error` call neither opens nor shifts it. The suite went from 88 to 92.
+
+**Checks run, in this order.** `npm run lint` clean over 66 files with no `lint:fix` needed;
+`npm run typecheck` clean; `npm run test` **15 files, 92 tests**; `npm run build` clean.
+
+**Browser evidence, because the unit tests cannot prove this fix.** That is the honest limit of the
+suite here: `renderApp` does not wrap the tree in `StrictMode`, and in jsdom `currentScenario()` is
+always `normal`, so no Vitest test can reach the double-mount that caused F-01. The claim would be
+unproven without a browser, so one was used — reusing the developer's already-running Vite server
+on `:5173` (PID `36721`, still listening afterwards, never restarted or stopped) and an owned
+adapter session `t001-f01-fix`, closed at the end.
+
+On `http://localhost:5173/sessions?mock=list-error-once`:
+
+```
+GET /api/sessions        (double mount, inside the window)
+GET /api/sessions  500   -> "Training sessions could not be loaded." + "Try again" now paints
+GET /api/sessions  200   -> after clicking "Try again": the five rows render
+```
+
+That is AC-04 and AC-05 in a single page load, which is exactly what section 12 documents and what
+was impossible before this change. Zero page errors throughout.
+
+**Regression checks in the same session.** `?mock=normal` renders the list; `?mock=empty` renders
+`No training sessions yet.`; `?mock=list-error` shows the error **and still does not recover** when
+`Try again` is clicked, confirming the window belongs to `list-error-once` alone.
+
+**Remaining risk and unverified state.**
+
+* `LIST_ERROR_ONCE_ATTEMPT_MS` is a judgement call, not a measured constant. A retry clicked within
+  500 ms of page load would fail a second time; the click after it succeeds. The reasoning is in a
+  code comment so a future reader can retune it deliberately rather than by accident.
+* The window is wall-clock based, so a debugger breakpoint held across the first request for longer
+  than 500 ms would let the remount succeed. Acceptable for a development-only demonstration switch.
+* Nothing else from the `browser-verify` record was touched. The `datetime-local` accessible-name
+  observation and the reload-resets-the-store note remain open as recorded, deliberately: neither is
+  a defect and neither was in this task's scope.
+* `specs/` still does not exist and was not created.
+
+**Stop.** The scoped fix and its essential tests are complete, every gate passes, and the behavior
+is proven in the environment where it actually failed. Per the Stop Contract this role does not
+invoke the next command; `browser-verify` re-running its own F-01 case would be the independent
+confirmation, since the evidence above was gathered by the role that wrote the fix.
+
+### Browser Verification Record — `browser-verify` role, F-01 re-check
+
+Verified `2026-09-02T20:45+02:00`. Independent re-run: the previous browser evidence for this fix
+was gathered by the role that wrote it, so F-01 is re-tested here from scratch, adversarially, plus
+a full regression sweep of everything the earlier record had passed. No production file, test,
+configuration, or fixture was edited by this role — `git status` after the run shows only the two
+files the `coder` pass changed and this log.
+
+**Readiness gate.** `node toolchain/bin/doctor.mjs --json` -> `"status": "READY"`, all eight checks
+`PASS`. The session's first adapter command was `open`.
+
+**Server ownership.** The developer's Vite process was still listening on `[::1]:5173` (PID
+`36721`); it was reused, never restarted and never stopped, and it is still listening after the run.
+The only owned process was the adapter session `t001-f01-recheck`, closed at the end. **The fix is
+uncommitted**, so it reached the browser through Vite HMR — confirmed directly rather than assumed:
+`curl http://localhost:5173/src/mocks/scenario.ts` returns a module containing
+`LIST_ERROR_ONCE_ATTEMPT_MS`, so the page under test really was running the new code.
+
+Session: `t001-f01-recheck`. Viewports: **1280x900** and **375x812**.
+
+**Verdict: `PASS`.** F-01 is fixed. The documented behavior now holds, the sibling scenarios are
+unaffected, and the timing boundary the fix introduces was measured rather than taken on trust —
+see the two findings below, neither of which blocks.
+
+#### F-01 is closed
+
+`http://localhost:5173/sessions?mock=list-error-once` on a 1280x900 desktop viewport:
+
+```
+GET /api/sessions        (StrictMode double mount, both inside the window)
+GET /api/sessions  500   -> role=alert paints: "Training sessions could not be loaded." + "Try again"
+GET /api/sessions  200   -> after clicking "Try again": five rows render
+```
+
+That is AC-04 followed by AC-05 in one page load — precisely what `api-integration.md` section 12
+documents and what was unreachable before. **Repeatability:** three consecutive fresh loads each
+painted the error state (`3/3`), so the fix is not a race that happened to fall the right way once.
+On 375x812 the same error state renders with `scrollWidth === clientWidth === 375`, no horizontal
+overflow, and the alert plus `Try again` fully visible.
+
+#### N-01 (non-blocking) — the measured dead zone is ~500 ms wide, and it is self-correcting
+
+The fix trades a boolean latch for a 500 ms window, so the obvious question is what happens to a
+retry that lands inside it. Measured, by clicking `Try again` at graded delays after the error
+first painted:
+
+| Click delay after the error appears | Result |
+| --- | --- |
+| `0 ms` (clicked the instant the button existed, 211 ms after navigation) | still errored |
+| `100 ms` | still errored |
+| `300 ms` | still errored |
+| `500 ms` | **recovered**, 5 rows |
+| `800 ms` | **recovered**, 5 rows |
+
+So a retry recovers from roughly 500 ms after the error paints onward. This matches the limitation
+the `coder` record disclosed rather than contradicting it, and the disclosed mitigation was
+verified directly: after a deliberately too-fast retry, **the very next click recovers** —
+`{rows: 0, stillErrored: true}` then `{rows: 5, stillErrored: false}`. The retry control never
+becomes dead and the user is never stuck.
+
+Whether this matters in practice: the fastest click measured here, 211 ms after navigation, is not
+a human action — it required polling the DOM and clicking the frame the button appeared. A person
+must perceive an unexpected error, read it, and travel to the button; that does not happen inside
+half a second. Recorded as a measured property of the chosen mechanism, not as a defect, so that
+whoever later retunes `LIST_ERROR_ONCE_ATTEMPT_MS` knows exactly what the current value buys.
+
+#### Regression sweep — everything the earlier record passed, re-run independently
+
+| Path | Evidence |
+| --- | --- |
+| `?mock=normal` | 5 rows |
+| `?mock=empty` | 0 rows, `No training sessions yet.` |
+| `?mock=slow` | resolves to 5 rows |
+| `?mock=list-error` | error paints and **still never recovers**: two consecutive `Try again` clicks both left `{rows: 0, stillErrored: true}`, proving the new window belongs to `list-error-once` alone |
+| List | 5 rows, `U12 Team Fundamentals` first — store order unchanged |
+| Filter | `select` -> URL `?status=scheduled`, `GET ...?status=scheduled 200`, 2 rows |
+| Create | `POST 201` -> refetch -> `{rows: 3, titles: ["Recheck Session", ...], formOpen: false, filter: "scheduled"}` — title trimmed from `"  Recheck Session  "`, form closed, filter preserved |
+| `?mock=create-error` (same module the fix touched, so re-checked deliberately) | `POST 500` -> `{formOpen: true, titleKept: "Guardrail Probe", submitEnabled: true}` — D-06 guardrail intact |
+| Console and page errors | `errors` empty on every page; filtering out Vite HMR, the React DevTools hint and MSW's own request log leaves **no application console output at all** |
+
+#### Still open from the previous record, deliberately untouched
+
+Neither was in the `coder` pass's scope and neither is a defect:
+
+* `datetime-local` exposes no single accessible name in Chrome — the AX tree decomposes it into
+  per-unit spinbuttons, so the browser does not give the guarantee
+  `getByLabelText("Start date and time")` implies in jsdom.
+* The mock store resets on page reload, so a session created in the browser vanishes on refresh.
+
+**Stop.** Evidence and verdict are reported, the owned browser session is closed, and the
+developer's dev server was left running and untouched. Per the Stop Contract this role repairs
+nothing and does not invoke the next command.
+
+### Code Review Record — `code-reviewer` role, full workspace implementation & F-01 fix
+
+Reviewed `2026-09-02T20:54+02:00`, read-only evidence-based review.
+
+**Review surface:** Bounded diff `b521743..working tree` restricted to `src/` (27 files, 1477 insertions, 6 deletions, plus F-01 scenario window update).
+Rulesets loaded: `rulesets/common/code-reviewer` (Evidence-First Review) and `rulesets/framework/code-reviewer`.
+Application Root is Repository Root.
+
+**Verdict: `PASS`.**
+
+#### Findings
+
+- **Blocking findings:** `0`.
+- **Should-fix findings:** `0`.
+- **Nits / observations (non-blocking):** `4` (detailed below).
+
+#### Detailed Code Analysis
+
+1. **Routing & Application Shell (`src/app/router.tsx`, `src/app/App.smoke.test.tsx`):**
+   - Route `/` cleanly redirects to `/sessions` via `loader: () => redirect("/sessions")` (D-04).
+   - `/sessions` renders `SessionsWorkspacePage` imported directly from the `@/features/sessions` barrel.
+   - `App.smoke.test.tsx` validates both the root redirect and the rendered layout headings inside `AppProviders`.
+
+2. **API Endpoint Wrappers (`src/services/api/endpoints/sessions.ts`, `sessions.test.ts`):**
+   - `listSessions` properly formats query strings, omitting empty parameters per Q-02 (`?status=scheduled` when set, `""` when empty).
+   - `createSession` posts the contract-compliant `CreateSessionRequest` payload to `/sessions`.
+   - Forwarding `AbortSignal` through `options.signal` prevents orphaned in-flight fetches.
+   - Colocated tests comprehensively assert parameter serialization, default handler responses, and error propagation.
+
+3. **MSW Mock Infrastructure (`src/mocks/`):**
+   - `sessions.seed.ts` provides the deterministic 5-record dataset covering all statuses (`scheduled` x2, `full`, `cancelled`, `completed`) with future/past timestamp separation per D-03.
+   - `sessions-db.ts` provides clean, isolated in-memory CRUD operations, sorting by `startsAt` ascending then `id`, with sequential ID generation (`ses_900+`) and a `resetSessionsDb()` test hook.
+   - `handlers.ts` enforces contract validation (`validateCreateBody`), returns exact status codes (`201` for create, `400` with `fieldErrors` on invalid payloads, `400 INVALID_FILTER` on unsupported statuses), and accurately computes `meta.total` after filtering.
+   - `scenario.ts` & F-01 fix: `LIST_ERROR_ONCE_ATTEMPT_MS = 500` attempt window cleanly absorbs React 19 development double-mounts while allowing user-initiated retries (`Try again`) to recover successfully, satisfying AC-04 and AC-05 in one page load. Clock injection (`now: number = Date.now()`) enables deterministic unit testing in `scenario.test.ts`.
+
+4. **Feature Model & State Management (`src/features/sessions/model/`):**
+   - `sessions-query.ts`: Uses structured query key factory `sessionKeys.list({ status })`, sets `retry: false` for the list query to ensure immediate error visibility per AC-04.
+   - `use-create-session-mutation.ts`: Wraps `createSession` with `buildCreateSessionRequest(values)`, invalidates `sessionKeys.lists()` on success without awaiting, closing the form immediately and refetching data seamlessly (Q-03, D-05).
+   - `create-session.ts`: Enforces 3–80 character trimmed title boundaries, future date checks using `isFutureLocalDateTime`, bundles fixed D-02 default fields (`CREATE_SESSION_DEFAULTS`), and produces localized error key suffixes (`titleLength`, `startsAtRequired`, `startsAtFuture`).
+
+5. **UI Components & Accessibility (`src/features/sessions/ui/`):**
+   - `SessionsWorkspacePage.tsx`: Manages `isFormOpen` modal state and synchronizes `status` with URL search params (`useSearchParams`), preserving unrelated search params like `?mock=...`.
+   - `StatusFilter.tsx`: Provides semantic `<label>` and `<select>` offering `All` and `Scheduled` (`FILTER_STATUS = "scheduled"`), driven purely by i18n keys.
+   - `SessionsListSection.tsx`: Explicitly handles all 4 query states (pending loading indicator with `role="status"`, error banner with `role="alert"` and retry button, empty state with `list.empty` message, and populated list).
+   - `SessionsList.tsx`: Emits semantic `<ul aria-label="...">` and `<li>` items. Uses `formatSessionStart` for local timezone formatting, gracefully falling back to `list.startUnknown` if unparseable rather than throwing or rendering empty.
+   - `CreateSessionForm.tsx`: Derives field errors live during render for instantaneous AC-18 clearance, re-validates against a fresh clock on submit (Q-01), wires accessible `aria-invalid` and `aria-describedby` with corresponding error element IDs, and disables the submit button during mutation pending state with `form.pending` copy.
+
+6. **Architecture & ED Layer Boundaries:**
+   - Strict adherence to ED small layers: `app -> features -> services -> shared`.
+   - No illegal imports of `app`, `mocks`, or `test` into `features` or `services`.
+   - Colocated tests interact with the MSW boundary exclusively via `@/test/msw`.
+   - Zero hardcoded UI strings; 100% of user-facing strings are resolved through the `sessions` and `common` i18n namespaces in both `en` and `ru`.
+   - Zero unnecessary `useMemo` / `useCallback` usage.
+
+7. **Quality Gates & Evidence:**
+   - `npm run lint` — Biome clean across 66 files (0 errors, 0 warnings).
+   - `npm run typecheck` — TypeScript strict clean (`tsc -b --noEmit`).
+   - `npm run test` — 15 test files, 92 tests passing (unit + integration).
+   - `npm run build` — Production build succeeds with 132 transformed modules (382.68 kB JS, 12.92 kB CSS).
+
+#### Residual Gaps and Observations (Non-Blocking)
+
+1. **`datetime-local` Accessible Name in WebKit/Blink:** The native browser control decomposes into unit spinbuttons in the accessibility tree; the visible label remains fully functional and accessible via `htmlFor`.
+2. **Seed Date Expiration (D-03 Time Horizon):** Fixtures `ses_101`..`ses_103` are seeded in mid-2027; unit assertions in `sessions.seed.test.ts` will require date bumps after August 2027.
+3. **`LIST_ERROR_ONCE_ATTEMPT_MS` Window:** Tuned to 500ms for development React StrictMode remounts. Retries triggered in under 500ms will fail once more and recover on the subsequent click.
+4. **Mock DB State Scope:** Mock database state is memory-resident; a full page browser reload resets to seed data (expected for client mock boundaries).
+
+Recommended next role: `docs-generator` / `finishing-branch`.
+
 ## Manual Browser Observation
 
-- Command and URL: `<actual command and discovered URL>`
-- Flow exercised: `<list -> filter -> create>`
-- Observed result: `<what actually happened>`
-- Unverified or incomplete behavior: `<none or short list>`
+Filled by the `browser-verify` role at `2026-09-02T20:15+02:00`; full evidence in the Browser
+Verification Record above.
+
+- Command and URL: no server was started by that role — the developer's own
+  `node node_modules/.bin/vite` (`npm run dev`, PID `36721`) was already listening, and was reused
+  and left running. Discovered URL: `http://localhost:5173`, entered at
+  `http://localhost:5173/sessions`.
+- Flow exercised: `/` redirect -> list (5 rows, real service worker) -> filter `Scheduled`
+  (URL becomes `?status=scheduled`, 2 rows) -> invalid create (both messages, **no POST**) ->
+  valid create (`POST 201`, refetch, trimmed row appears, filter kept) -> scenarios `?mock=slow`,
+  `?mock=empty`, `?mock=list-error`, `?mock=list-error-once`, `?mock=create-error` -> mobile
+  375x812 and keyboard tab order.
+- Observed result: every acceptance criterion that is browser-observable passed, with zero page
+  errors and no application console warnings. One documented behavior failed — see the next line.
+- Unverified or incomplete behavior:
+  - ~~**AC-05 has no browser-observable path** (F-01)~~ — **closed `2026-09-02T20:45+02:00`.** The
+    `coder` pass replaced the one-shot latch with a 500 ms attempt window, and the re-check at
+    20:45 observed `500` -> error state -> `Try again` -> `200` -> five rows in one page load, on
+    three of three consecutive loads. AC-05 is now demonstrable in a browser. The window's measured
+    dead zone (a retry inside ~500 ms fails once more, the next click recovers) is recorded as N-01
+    in that record.
+  - `datetime-local` exposes no single accessible name in Chrome (decomposed into per-unit
+    spinbuttons), so the browser does not give the guarantee `getByLabelText("Start date and time")`
+    implies in jsdom. Still open; not a defect.
+  - The mock store resets on page reload, so a browser-created session vanishes on refresh. Still
+    open; correct for module-scoped state.
 
 ## Completion
 

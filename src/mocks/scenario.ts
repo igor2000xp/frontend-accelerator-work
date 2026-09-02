@@ -30,18 +30,42 @@ export function currentScenario(): MockScenario {
 	return isMockScenario(raw) ? raw : "normal";
 }
 
-let listErrorOnceUsed = false;
+/**
+ * How long one `list-error-once` *attempt* lasts.
+ *
+ * The boundary cannot tell a React development remount from the user pressing "Try again": both
+ * are byte-identical `GET /api/sessions`. React re-mounts every component once in development, so
+ * failing only the first *request* handed the discarded mount the error and the surviving mount a
+ * success — the error state never painted and the documented "error, then a successful retry in
+ * one page load" check could not be performed at all. Every request inside this window is
+ * therefore treated as the same failed attempt. A remount arrives within milliseconds; a person
+ * reading an error and clicking a button cannot, so a retry lands outside the window and succeeds.
+ */
+const LIST_ERROR_ONCE_ATTEMPT_MS = 500;
 
-/** `list-error-once` fails only the first list request after a page load, so a retry can succeed. */
-export function shouldFailListRequest(scenario: MockScenario): boolean {
+let listErrorOnceStartedAt: number | null = null;
+
+/** `list-error-once` fails the first list attempt after a page load, so a retry can succeed. */
+export function shouldFailListRequest(scenario: MockScenario, now: number = Date.now()): boolean {
 	if (scenario === "list-error") {
 		return true;
 	}
-	if (scenario !== "list-error-once" || listErrorOnceUsed) {
+	if (scenario !== "list-error-once") {
 		return false;
 	}
-	listErrorOnceUsed = true;
-	return true;
+	if (listErrorOnceStartedAt === null) {
+		listErrorOnceStartedAt = now;
+		return true;
+	}
+	return now - listErrorOnceStartedAt < LIST_ERROR_ONCE_ATTEMPT_MS;
+}
+
+/**
+ * Reopens the first-attempt window. Needed only to isolate tests within one file, the way
+ * `resetSessionsDb` is; a browser gets a fresh module on every page load.
+ */
+export function resetListErrorOnce(): void {
+	listErrorOnceStartedAt = null;
 }
 
 export const LIST_ERROR_BODY: ApiErrorBody = {
