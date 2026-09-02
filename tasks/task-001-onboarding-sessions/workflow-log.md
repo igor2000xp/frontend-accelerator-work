@@ -26,10 +26,44 @@ Doctor evidence at start: `training/frontend-accelerator-onboarding/workflow-log
 | --- | --- | --- | --- | --- | --- |
 | `2026-09-02T04:07+02:00` | `developer (no role)` | `n/a — developer-authored task brief` | `tasks/task-001-onboarding-sessions/task.md` | `accept` | `initialize the React application before any role runs` |
 | `2026-09-02T04:18-04:23+02:00` | `developer (no role)` | `n/a — environment bootstrap, outside the timebox` | `Vite 7 + React 19 + TS 5.9 strict app initialized; ED layers, Tailwind 4, React Router 7, TanStack Query 5, i18next en+ru, Biome, MSW, Vitest wired. build / typecheck / lint / test all pass; dev server renders the shell with MSW active. Doctor re-run: READY.` | `accept` | `manually select requirements-analyst` |
-| `2026-09-02T<hh:mm>+02:00` (developer to fill) | `requirements-analyst` | verbatim in "Prompt: requirements-analyst" below | `tasks/task-001-onboarding-sessions/requirements.md` — 27 acceptance criteria (AC-01..AC-27), non-goals from TASK.md "Explicitly Optional", facts F-01..F-12, assumptions A-01..A-08, open questions Q-01..Q-08, decisions D-01..D-06, specialist gaps for architect / api-integration / ui-designer. Verdict: ready for planning with recorded decisions. Role STOPped. | `<pending developer decision>` | `<pending — analyst recommends writing-plans with D-01..D-05 answered in the prompt>` |
+| `2026-09-02T06:02-06:07+02:00` | `requirements-analyst` | verbatim in "Prompt: requirements-analyst" below | `tasks/task-001-onboarding-sessions/requirements.md` — 27 acceptance criteria (AC-01..AC-27), non-goals from TASK.md "Explicitly Optional", facts F-01..F-12, assumptions A-01..A-08, open questions Q-01..Q-08, decisions D-01..D-06, specialist gaps for architect / api-integration / ui-designer. Verdict: ready for planning with recorded decisions. Role STOPped. | `accept with corrections` — coverage checked against TASK.md and factual claims spot-checked; two developer corrections recorded below (assessment material is reference-only; mock data authored locally) | `manually select writing-plans`, with D-01..D-06 answered in the prompt |
 
 Add one row for each role invocation or important correction. Preserve each prompt exactly, but do
 not copy full role responses into this file.
+
+### Developer Review Of `requirements.md`
+
+Reviewed `2026-09-02T06:15+02:00`. Accepted as the basis for planning.
+
+Coverage against TASK.md is complete: list with title/status/start, `All` plus one status filter,
+loading, one recoverable request-error state, create form, trimmed 3-80 title, future date/time,
+duplicate-submission prevention, validation message, created session visible in the list, mock
+boundary, and one behavior-level test. Factual claims were spot-checked and are correct:
+`src/services/api/http.ts` throws without reading the error body, `src/mocks/handlers.ts` and
+`src/services/api/endpoints/` are empty, the router index renders `null`, only the `common` i18n
+namespace exists, ARCHITECTURE.md 8.4 does require loading/empty/success/error (so AC-06 is a real
+repository constraint, not added scope), and section 7 matches AC-27.
+
+Two corrections, both developer-owned:
+
+1. Scope authority. `training/frontend-accelerator-onboarding/README.md` states: "Do not use files
+   from `frontend-accelerator-assessment/` during this task." My prompt named that directory's
+   `API_CONTRACT.md` as source 4, so the analyst used it correctly, but for this task id the
+   assessment material is reference-only for naming and payload shape. TASK.md stays the sole
+   authority. Consequence: D-02 needs no contract-deviation proposal, and the form does not grow
+   extra fields; the endpoint wrapper may supply fixed defaults for the fields the form does not
+   collect.
+2. Mock data. Fixtures are not imported from `training/frontend-accelerator-assessment/fixtures/`.
+   Equivalent mock data is authored under `src/mocks/` with future-dated `startsAt` values. This
+   moots Q-06 (fixture location) and reduces Q-05/D-03 (fixture-clock rebasing) to seeding future
+   dates, which removes the past-date confusion at no cost. AC-09 and AC-10 remain valid as long as
+   the local seed mirrors the five records and their statuses.
+
+Accepted as in scope: AC-22 (recoverable create error), which settles D-06.
+
+Carried into the `writing-plans` prompt: AC-02 asserts local-timezone rendering, which is
+machine-dependent. The plan must pin the timezone in the test or assert through the same formatter
+the UI uses.
 
 ### Prompt: requirements-analyst
 
@@ -76,7 +110,9 @@ the timebox. The `coder` prompt stays bounded to the feature slice.
 - Known limitations:
   - `npm run scaffold:feature` / `scaffold:route` do not exist in this repository; feature folders
     were created by hand following the ED layer rules in AGENTS.md.
-  - `ARCHITECTURE.md`, `ai/recipes/`, `ai/prompts/`, and
-    `.claude/skills/react-spa-best-practices/SKILL.md` are referenced by AGENTS.md but absent.
+  - At bootstrap `ARCHITECTURE.md`, `ai/recipes/`, `ai/prompts/`, and
+    `.claude/skills/react-spa-best-practices/SKILL.md` were absent although AGENTS.md references
+    them. `ARCHITECTURE.md` and the skill were added afterwards; `ai/recipes/` and `ai/prompts/`
+    exist but are still empty.
   - `src/features/home/` does not exist, so no in-repo example feature was available as a model.
   - `<add remaining limitations after review and verification>`
