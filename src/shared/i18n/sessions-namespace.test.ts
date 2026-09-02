@@ -42,6 +42,7 @@ describe("sessions i18n namespace", () => {
 				"list.error.retry",
 				"list.heading",
 				"list.loading",
+				"list.startUnknown",
 				"status.cancelled",
 				"status.completed",
 				"status.full",

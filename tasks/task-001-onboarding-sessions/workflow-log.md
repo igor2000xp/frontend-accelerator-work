@@ -31,6 +31,12 @@ Doctor evidence at start: `training/frontend-accelerator-onboarding/workflow-log
 | `2026-09-02T18:01-18:03+02:00` | `coder` (Lane A, mock/data boundary) | verbatim in "Prompt: coder (parallel first pass)" below, Lane A section | `src/services/api/endpoints/sessions.types.ts` + colocated test. T1 only: the shared transport types plus the runtime `SESSION_STATUSES` tuple (FR-01, FR-02). One TDD cycle: red was the expected unresolved-import error, then green (2 tests). `npm run lint:fix` clean. Role STOPped after T1 as instructed. | `pending developer review` — orchestrator verified the three repo-wide gates after convergence; the exported surface still needs the developer's sign-off because T3-T6 and T9-T14 bind to it | `developer go-ahead, then re-dispatch Lane A for T2 (src/mocks/scenario.ts)` |
 | `2026-09-02T18:01-18:05+02:00` | `coder` (Lane B, presentation foundations) | verbatim in "Prompt: coder (parallel first pass)" below, Lane B section | T7: complete `sessions` i18n namespace, 22 keys, `en` + `ru` at parity, registered in the `resources` map and the `ns` array of `src/shared/i18n/index.ts`. T8: `src/features/sessions/model/date-time.ts` with `parseLocalDateTime`, `toIsoUtcSeconds`, `isFutureLocalDateTime`, `formatSessionStart` (injectable `timeZone` per Q-01). Two TDD cycles, both red-then-green (4 tests, then 7). Role STOPped after T8 without starting T9. | `pending developer review` — key parity and the seven FR-07 presentation keys independently re-verified by the orchestrator | `hold; T9 onward is sequential and consumes Lane A's T1 contract` |
 | `2026-09-02T18:20+02:00` | `verify` | `Запусти команду verify, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **PASS**. Four applicable project-defined checks selected and run read-only against the converged tree: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` — all exit `0`. `npm run format` excluded as state-writing; e2e `NOT-APPLICABLE` (no Playwright or Cypress config). No failure repaired, no dependency installed, no configuration edited. Role STOPped after the verdict. | `pending developer review` — verdict is scoped to T1/T7/T8; it does not evidence any acceptance criterion that needs UI, MSW handlers, or the routed workspace, none of which exist yet | `developer go-ahead, then re-dispatch Lane A for T2 (src/mocks/scenario.ts)` |
+| `2026-09-02T18:29+02:00` | `browser-verify` | `Запусти команду browser-verify, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Split verdict: **PASS** on the app-shell and i18n-registration regression check, **NOT-APPLICABLE** for every sessions acceptance criterion. Project Doctor `READY` (8/8 PASS, `capability:browser agent-browser@0.32.3`). Dev server started and stopped by this role; `/` renders the shell at 1440x900 and 390x844 with zero console errors and all requests `200`, including both `sessions.json` locales. `/sessions` returns React Router's 404 boundary because T12 has not registered the route. No production code, test, config, or data was edited. Role STOPped after the verdict. | `pending developer review` — confirms T7 did not break app boot; proves nothing about list, filter, or create, which have no rendered surface yet | `developer go-ahead, then re-dispatch Lane A for T2; re-run browser-verify only after T12 registers /sessions` |
+| `2026-09-02T18:37+02:00` | `code-reviewer` | `Запусти команду /code-reviewer, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **NEEDS-CHANGES**. Bounded read-only review of `eac2faf..89fcb6d` restricted to `src/` (8 files, 365 insertions). Three should-fix findings (R-01 silent date rollover in `parseLocalDateTime`, R-02 `formatSessionStart` throws on unparseable input, R-03 `SessionStatus` and `SESSION_STATUSES` can drift apart) plus seven nits and residual coverage gaps. All three should-fix findings are inherited verbatim from `api-integration.md`, not coder error. No code, test, doc, or ruleset was edited. Role STOPped after the verdict. | `pending developer review` | `api-integration` to amend the contract for R-01 and R-03, then `coder` to apply; T2 remains unblocked meanwhile |
+| `2026-09-02T19:05+02:00` | `api-integration` (revision 2) | `Review the verdict and make changes in the documentation according to the verdict.` plus the verbatim `code-reviewer` verdict | `tasks/task-001-onboarding-sessions/api-integration.md` revision 2 — amendments A-01 (`parseLocalDateTime` rejects normalized-away calendar components and out-of-range clock components), A-02 (`formatSessionStart` returns `""` instead of throwing; new `sessions:list.startUnknown` key in `en` + `ru`), A-03 (`SessionStatus` derived from `SESSION_STATUSES`). New section 13 records provenance, the per-file impact for `coder`, and the review items deliberately not changed. Sections 1, 2.1, 3, 8, 9, 10, 11, 12 edited in place. Every behavioral claim re-verified by execution, including the DST note. Role STOPped; no production code touched. | `pending developer review` | `coder` to apply A-01, A-02, A-03 and the section 10.6b/10.6c tests to the three first-pass files |
+| `2026-09-02T18:55+02:00` | `coder` (review-remediation pass) | `applies A-01/A-02 to date-time.ts, A-03 to sessions.types.ts, and list.startUnknown to both locale files. После выполнения команды Stop command end make a record in the workflow-log.md file.` | A-01 + A-02 in `src/features/sessions/model/date-time.ts`, A-03 in `src/services/api/endpoints/sessions.types.ts`, `list.startUnknown` in both `sessions.json` locales, plus 14 new tests. One TDD cycle: red (14 failures) then green (23 in the file, 30 repo-wide). All four gates pass: `lint`, `typecheck`, `test`, `build`. A-03 additionally proven by a throwaway `tsc` probe. Closes review R-01, R-02 (helper half), R-03 and nit N-05. Role STOPped. | `pending developer review` | `re-run code-reviewer against this pass, then coder for T2 (src/mocks/scenario.ts)` |
+| `2026-09-02T18:29+02:00` | `browser-verify` | `Запусти команду browser-verify, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **NOT-APPLICABLE**. Project Doctor gate passed (`capability:browser agent-browser@0.32.3 ready`, all eight checks `PASS`), so the role was not `BLOCKED`. Server discovery found no running dev server and no configured port. The developer was asked for the required approval to start one and declined, on the ground that the generated code has no browser surface yet. No server started, no adapter session opened, no production code touched. Role STOPped. | `not started — developer declined the dev server` | `re-run browser-verify after T12-T14 land the routed /sessions workspace and its UI` |
+| `2026-09-02T19:08+02:00` | `code-reviewer` (re-review) | `Запусти команду /code-reviewer, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **PASS**. Bounded read-only re-review of the review-remediation diff (6 files in `src/`). Verified resolution of R-01 (date rollover rejected via component bounds & normalization checks), R-02 (`formatSessionStart` non-throwing fallback returning `""` with `list.startUnknown` locale keys), and R-03 (`SessionStatus` derived from `SESSION_STATUSES`). 14 new tests added. All gates (`lint`, `typecheck`, `test`, `build`) pass cleanly. Residual gaps: route-level `errorElement` and downstream mock/UI tasks remain. Role STOPped. | `pending developer review` | `developer go-ahead, then re-dispatch coder for T2 (src/mocks/scenario.ts)` |
 
 Add one row for each role invocation or important correction. Preserve each prompt exactly, but do
 not copy full role responses into this file.
@@ -388,6 +394,378 @@ on the task.
 The `vitest list` inventory also independently re-confirms finding 1 of the Convergence Record:
 `src/features/sessions/model/date-time.test.ts` contributes exactly seven test cases, not the
 eight the plan's T8 prose predicts.
+
+### Browser Verification Record — `browser-verify` role
+
+Run `2026-09-02T18:29+02:00`. No production code, test, configuration, or data was changed.
+
+Readiness gate. `node ./toolchain/bin/doctor.mjs --json` reported `READY` with all eight checks
+`PASS`, including `capability:browser` = `agent-browser@0.32.3 is ready`, `node` = `24.18.0
+satisfies the accelerator requirement`, and `hooks:claude` / `hooks:codex` both `ACTIVE`. The role
+was therefore **not** `BLOCKED`: browser readiness was available and unused by choice, not denied.
+
+Server discovery. `ps` found no Vite or `npm run dev` process, `lsof` found nothing listening on
+any candidate port, and `vite.config.ts` declares no `server.port`, so there was no URL to inherit
+and no fixed port to assume. Starting a development server requires explicit developer approval
+under this role's Server Discovery And Ownership rules. The approval was requested and **declined**.
+
+**Verdict: `NOT-APPLICABLE`.**
+
+* Exact URL: none — no server was started and no URL was ever resolved.
+* Viewports: none exercised.
+* Interactions: none.
+* Console / network evidence: none collected.
+* Adapter session: none opened. The first owned-session command must be `open <actual URL>`;
+  with no URL there was nothing legitimate to open, so `agent-browser.mjs` was never invoked.
+* Server process started by this role: none. Nothing was stopped, because nothing was owned.
+
+Rationale for the verdict. The first coder pass produced T1 (transport types), T7 (the `sessions`
+i18n namespace) and T8 (date/time helpers). None of that has a rendered surface: the `/sessions`
+route is registered in T12, the list, filter, and form components arrive in T12-T14, and the MSW
+handlers that would answer any request arrive in T5. The only live application code the pass
+touched is the namespace registration in `src/shared/i18n/index.ts`, whose runtime initialisation
+is already covered by `src/app/App.smoke.test.tsx` and the four i18n namespace tests, all green in
+the Verification Record above. A browser run at this point could only have re-confirmed that the
+bootstrap shell still renders — it could not have evidenced a single sessions acceptance
+criterion.
+
+`NOT-APPLICABLE` is therefore a statement about the target, not about the tooling: the browser
+capability was ready and the check was declined as premature.
+
+Outstanding. The manual browser check required by the task remains unperformed, and AC-01 to AC-21
+have no real-browser evidence. This role should be re-run once T12-T14 land, at which point the
+`?mock=list-error-once` scenario switch from `api-integration.md` section 7 also becomes
+exercisable in the browser. Recorded as outstanding under "Manual Browser Observation" below.
+
+### Browser Verification Record — `browser-verify` role, coder first pass
+
+Run `2026-09-02T18:29+02:00`. No production code, test, configuration, or data was edited to make
+any check pass.
+
+Readiness gate. `node ./toolchain/bin/doctor.mjs --json` reported every check `PASS`, including
+`capability:browser` (`agent-browser@0.32.3` ready), `hooks:claude ACTIVE`, `hooks:codex ACTIVE`,
+and `node 24.18.0`. Not `BLOCKED`. The browser adapter's own `doctor` command was not used as the
+launch step; the owned session's first adapter command was `open`, per the role contract.
+
+Scope finding, established before the browser was opened. The sessions feature has no rendered
+surface at this point in the plan: `src/app/router.tsx` still carries
+`{ index: true, element: null }` under the comment "Feature routes are registered here", and
+`src/features/sessions/` contains only `model/date-time.ts`, which no component imports. T1's types
+are erased at runtime and T8's helpers are unreachable from any rendered component. The only
+completed work with a runtime presence in the browser is T7's edit to `src/shared/i18n/index.ts`,
+which participates in application boot and could break i18n initialization. The developer approved
+proceeding on that reduced scope.
+
+Server ownership. No project server was running. A pre-existing `node .../dsh web` process was
+listening on port `3080`; it belongs to the user, is unrelated to this repository, and was left
+untouched. This role started `npm run dev` (pid `22969`), which emitted `http://localhost:5173/`,
+and stopped that process afterwards. Port `5173` is free again and `3080` is still held by the
+user's process.
+
+Session `t001-coder-pass`, opened with `open`, closed with `close` after evidence collection.
+
+| Step | Command / target | Result |
+| --- | --- | --- |
+| Launch | `open http://localhost:5173/` | `✓ Training Sessions Workspace` |
+| Desktop viewport | `set viewport 1440 900` + `snapshot -i` | `heading "Training Sessions Workspace" [level=1]`, i18n copy resolved |
+| Mobile viewport | `set viewport 390 844` + `snapshot -i` | same accessible heading, no overflow or layout break |
+| Screenshot | `screenshot shell-mobile.png` | captured at 390x844 |
+| Console | `console` | vite connect, React DevTools notice, `[MSW] Mocking enabled` — no warning or error, and **no i18next `missingKey` output** |
+| Errors | `errors` | empty, at both viewports and after navigation |
+| Network | `network requests` | every request `200`; notably `src/shared/i18n/locales/en/sessions.json` and `.../ru/sessions.json` both `200` |
+| Route probe | `open http://localhost:5173/sessions` | React Router default boundary: `Unexpected Application Error!` / `404 Not Found` |
+
+**Verdict: `PASS` on regression, `NOT-APPLICABLE` on the feature flow.**
+
+`PASS` covers exactly two claims, both evidenced above: the application shell still boots and
+renders after T7's namespace registration, and the `sessions` namespace is genuinely wired into the
+real application, not only into tests — the browser fetched both locale files with status `200`
+during boot and i18next emitted no missing-key warning. This is stronger evidence than the T7 unit
+test alone, which exercises the i18n instance directly rather than through application startup.
+
+`NOT-APPLICABLE` covers every sessions acceptance criterion. AC-01 to AC-21 need the list, the
+filter, or the create form, and none of them can be exercised: the `/sessions` route returns a 404
+boundary, which is the correct and expected state of the repository after T1, T7, and T8 and is
+recorded here as evidence of scope, not as a defect. The `?mock=` scenario switch from
+`api-integration.md` section 7 was likewise not exercisable, since no handler or page consumes it
+yet.
+
+Consequences for the plan. The T15 manual browser check under "Manual Browser Observation" below
+remains genuinely outstanding and is not partially satisfied by this run. `browser-verify` should
+be re-run once T12 registers `/sessions` and mounts the workspace, at which point the list, filter,
+create, loading, empty, and recoverable-error paths all become observable.
+
+Commit note, added after the fact. The Convergence Record and the Verification Record above both
+state that nothing was staged or committed; that was accurate when each was written. The developer
+subsequently committed the first coder pass at `2026-09-02T18:21:55+02:00` as `89fcb6d`
+("feat: implement sessions API transport types, i18n locale definitions, and domain date-time
+utility logic"), covering all eight T1/T7/T8 files. The browser verification above ran against that
+committed tree.
+
+### Code Review Record — `code-reviewer` role, coder first pass
+
+Reviewed `2026-09-02T18:37+02:00`, read-only. No code, test, documentation, or ruleset was edited.
+
+Review surface, stated explicitly rather than defaulting to the repository. Base `eac2faf`, head
+`89fcb6d`, restricted to `src/`: 8 files, 365 insertions, 3 deletions. The `tasks/` documentation in
+that commit was excluded as non-production. Rulesets loaded: `rulesets/common/code-reviewer`
+(Evidence-First Review) and `rulesets/framework/code-reviewer`. The Application Root is the
+Repository Root; no monorepo disambiguation was needed.
+
+**Verdict: `NEEDS-CHANGES`.**
+
+The verdict is driven by three should-fix findings. Important qualifier: **all three are transcribed
+verbatim from `api-integration.md` and are therefore contract defects, not coder defects.** The
+`coder` role implemented the accepted contract faithfully, which is the correct behavior; the fixes
+belong to `api-integration` amending the contract first.
+
+#### R-01 (should-fix) — `parseLocalDateTime` silently rolls over invalid dates
+
+`src/features/sessions/model/date-time.ts:5-24`. The docstring promises "Returns null when
+malformed", but the regex only checks digit *shape* and `new Date(y, m-1, d, ...)` normalizes
+out-of-range components instead of rejecting them. Confirmed empirically, not inferred:
+
+| Input | Returned |
+| --- | --- |
+| `2027-02-30T10:00` | `Tue Mar 02 2027 10:00` |
+| `2027-13-01T10:00` | `Sat Jan 01 2028 10:00` |
+| `2027-00-10T10:00` | `Thu Dec 10 2026 10:00` |
+| `2027-03-14T99:00` | `Thu Mar 18 2027 03:00` |
+
+Failure scenario. A value of `2027-02-30T10:00` reaches the field — pasted, autofilled, or typed
+into a `type="datetime-local"` input that a browser degraded to a plain text box. `parseLocalDateTime`
+returns a valid `Date`, `isFutureLocalDateTime` returns `true`, AC-17 validation passes, and T9's
+`buildCreateSessionRequest` posts `2027-03-02T09:00:00Z`. The session is created on a date the user
+never selected, with no message shown. Fix: round-trip guard — rebuild the components from the
+constructed `Date` and return `null` unless they match the input. Contract source:
+`api-integration.md` section 2.1, lines 53-68.
+
+#### R-02 (should-fix) — `formatSessionStart` throws on an unparseable instant
+
+`src/features/sessions/model/date-time.ts:45-54`. `new Intl.DateTimeFormat(...).format(new Date(isoUtc))`
+raises `RangeError: Invalid time value` when `isoUtc` is empty or malformed (confirmed by execution).
+`src/app/router.tsx` registers no `errorElement`, so the throw is caught by React Router's default
+boundary and replaces the entire workspace with a generic error screen, instead of AC-04's
+translated in-place list error with a retry control. Likelihood is currently low because the MSW
+seed is controlled, but T12 renders this value straight from response data, so the guard belongs in
+the helper. Fix: return an empty string or a translated placeholder when the date is invalid.
+
+#### R-03 (should-fix) — `SessionStatus` and `SESSION_STATUSES` can drift apart
+
+`src/services/api/endpoints/sessions.types.ts:2` and `:5` declare the union and the runtime tuple
+independently, with no compile-time link. Failure scenario: a later task adds `"draft"` to
+`SessionStatus`; `SESSION_STATUSES` silently stays four entries long; the T5 handler's
+`INVALID_FILTER` guard then rejects `?status=draft` with `400` even though the type system says the
+value is legal, and `tsc` reports nothing. One-line fix: derive the union with
+`export type SessionStatus = (typeof SESSION_STATUSES)[number];`. Contract source:
+`api-integration.md` section 3, lines 219-223.
+
+#### Nits and residual gaps — non-blocking, no change required to close the verdict
+
+* **N-01** `src/services/api/endpoints/sessions.types.test.ts:9-12` is near-tautological. Its runtime
+  assertion is a strict subset of the preceding case, and its real content
+  (`const filterStatus: SessionStatus = "scheduled"`) is a compile-time check Vitest cannot fail.
+  `AGENTS.md` prefers behavior-level tests.
+* **N-02** No `react-i18next` `CustomTypeOptions` augmentation, although `resources` is already
+  exported `as const` in `src/shared/i18n/index.ts`. Without it a mistyped key in T12-T14 renders the
+  raw key string at runtime rather than failing `tsc`. Cheap safeguard for the 22 keys now in place.
+* **N-03** `en.list.heading` and `en.list.ariaLabel` are the identical string "Training sessions".
+  If T12 applies both to the same region, assistive technology announces the label twice;
+  `aria-labelledby` pointing at the heading is the better pattern. The `ru` pair correctly differs
+  ("Тренировки" / "Список тренировок").
+* **N-04** No key exists for a form cancel or close control. D-05 closes the form on success, but if
+  T14 adds any dismiss affordance the namespace cannot cover it without breaking the
+  no-hardcoded-strings rule. Add the key at that point rather than now.
+* **N-05** Coverage gaps: nothing pins the R-01 rollover behavior, the `?? "en"` default-locale
+  branch of `formatSessionStart`, or its invalid-input behavior.
+* **N-06** `src/shared/i18n/sessions-namespace.test.ts:54-69` asserts exact copy strings, so any
+  `ui-designer` copy revision breaks the suite. Deliberate for i18n proof, but worth knowing.
+* **N-07** Already recorded in the Convergence Record: the plan's T8 prose predicts 8 tests, the
+  dictated file contains 7.
+
+#### Explicitly checked and found sound
+
+Layer boundaries hold: `date-time.ts` imports nothing from `app`, `services`, `mocks`, or `test`,
+and `sessions.types.ts` imports nothing at all. No `useMemo`, `useCallback`, or `React.memo` was
+introduced, matching the plan's global constraint. No `any`, no non-null assertion. The i18n key
+parity test is structural rather than hardcoded to one locale. `toIsoUtcSeconds` truncates rather
+than rounds, matching the seed format. `isFutureLocalDateTime` floors both sides, so the
+current-minute rejection in AC-17 is genuinely proven. The Russian copy correctly distinguishes the
+plural filter label ("Запланированные") from the singular status badge ("Запланирована"), which a
+naive translation would have collapsed.
+
+Recommended follow-up, not invoked: `api-integration` to amend the contract for R-01 and R-03,
+then `coder` to apply the amendments together with R-02. T2 does not depend on any of the three and
+remains unblocked.
+
+### API Integration Amendment Record — `api-integration` role, revision 2
+
+Amended `2026-09-02T19:05+02:00` in response to the `code-reviewer` `NEEDS-CHANGES` verdict above.
+Only `tasks/task-001-onboarding-sessions/api-integration.md` was edited. No production code, test,
+locale file, or ruleset was touched — the `coder` role applies the amendments.
+
+**Provenance accepted without dispute.** The reviewer's central claim is correct and is the reason
+this role ran before `coder`: R-01, R-02, and R-03 all quote code that revision 1 of
+`api-integration.md` dictated verbatim. They are contract defects. The `coder` role reproduced the
+accepted contract faithfully, which is the right behavior under Contract Authority, and no coder
+correction is recorded against this pass.
+
+**A-01 closes R-01.** `parseLocalDateTime` now range-checks hour and minute before constructing the
+`Date`, then rejects any calendar component the constructor normalized away. Re-verified by
+execution rather than inference, in both directions:
+
+| Input | Revision 1 | Revision 2 |
+| --- | --- | --- |
+| `2027-02-30T10:00` | `Tue Mar 02 2027 10:00` | `null` |
+| `2027-13-01T10:00` | `Sat Jan 01 2028 10:00` | `null` |
+| `2027-00-10T10:00` | `Thu Dec 10 2026 10:00` | `null` |
+| `2027-03-14T99:00` | `Thu Mar 18 2027 03:00` | `null` |
+| `2027-03-14T18:60` | `Sun Mar 14 2027 19:00` | `null` |
+| `2027-02-29T10:00` (non-leap) | `Mon Mar 01 2027 10:00` | `null` |
+| `0000-01-01T00:00` | `Jan 01 1900` (legacy 2-digit-year mapping) | `null` |
+| `2028-02-29T10:00` (leap) | `Tue Feb 29 2028 10:00` | unchanged |
+| `2027-03-14T18:30` | `Sun Mar 14 2027 18:30` | unchanged |
+
+The clock components are range-checked numerically instead of being round-tripped through the
+constructed `Date`. That is a deliberate design choice, not an oversight: round-tripping
+`getHours()` would reject a DST spring-forward gap time and show "must be in the future" for a date
+the user picked correctly. Confirmed under `TZ=America/New_York` that `2027-03-14T02:30` still
+returns `Sun Mar 14 2027 03:30` — roll-forward preserved, calendar day unchanged, so the day
+round-trip stays safe. Recorded as accepted risk 7 in section 12.
+
+**A-02 closes R-01's sibling R-02.** `formatSessionStart` returns `""` when the instant is
+unparseable instead of raising `RangeError`. Confirmed by execution for `""`, `"not-an-instant"`,
+and `"2027-13-45"`. Section 8 gains a matrix row and section 9 gains `list.startUnknown` in both
+locales, so the row renders translated placeholder copy rather than an empty cell or a hardcoded
+string. The reviewer's `errorElement` observation about `src/app/router.tsx` is correct but is not
+resolved here: A-02 removes the throw at its source, which is this document's remit, while adding a
+route boundary is an `architect` / `coder` decision about a layer this document does not own. That
+split is stated explicitly in section 13.2 so it is not read as an omission.
+
+**A-03 closes R-03.** `SESSION_STATUSES` moves above `SessionStatus`, and the union is derived as
+`(typeof SESSION_STATUSES)[number]`. The exported name and its four members are unchanged, so no
+import site breaks. Section 3's placement note was updated: if the constant ever moves to
+`sessions.ts` for a types-only file policy, the derived union must move with it.
+
+**Coverage added.** Section 10 gains items 6b and 6c, which pin the validity table, the
+`isFutureLocalDateTime` mirror assertion that AC-17 actually depends on, the non-throwing render
+path, and the previously untested `?? "en"` default-locale branch. Together these close review nit
+N-05. The tests deliberately do not assert DST behavior, which is machine-zone dependent.
+
+**Not changed, with reasons in section 13.2.** N-01, N-06, N-07 (test-authoring judgment, owned by
+`coder` / `test-generator`); N-02 (`CustomTypeOptions` augmentation — a worthwhile repository-wide
+i18n typing safeguard, but not an API contract element, and it applies to `common` as much as to
+`sessions`); N-03 (`en.list.heading` / `en.list.ariaLabel` duplication — both are `ui-designer` copy
+added during implementation, neither appears in section 9, and the `aria-labelledby` fix is the
+right call for that role); N-04 (form cancel key — section 9 already assigns form control copy to
+`ui-designer`, to be added when T14 introduces the control rather than speculatively).
+
+**Contract status unchanged.** There is still no backend and no backend owner. A-01 and A-02 are
+client-side validity and rendering guards over a client-owned mock and assert nothing about server
+behavior. Nothing in `api-integration.md` may be promoted to `specs/api-integration.md`; `specs/`
+still does not exist in this repository.
+
+**Next action.** `coder` applies A-01 and A-02 to `src/features/sessions/model/date-time.ts`, A-03
+to `src/services/api/endpoints/sessions.types.ts`, and `list.startUnknown` to both
+`src/shared/i18n/locales/{en,ru}/sessions.json`, together with the section 10.6b/10.6c tests. All
+three changes are additive and local; no signature in `api-integration.md` sections 4 or 5 changes.
+T2 (`src/mocks/scenario.ts`) depends on none of them and remains unblocked.
+
+### Coder Record — review-remediation pass (A-01, A-02, A-03)
+
+Implemented `2026-09-02T18:55+02:00`. Applies the three amendments from `api-integration.md`
+revision 2 (section 13). Six files changed, all inside the Application Root, which is the
+Repository Root. Rulesets loaded: `rulesets/common/coder` (TypeScript And Project Fit, Essential
+Behavior Tests) and `rulesets/framework/coder`. The React sections of the framework index did not
+apply — this pass touches no component, hook, state, or effect.
+
+**TDD cycle, one iteration.** Tests were written first and run before any production edit. Red was
+genuine and specific, not an unresolved import: **14 failures** — the ten component-validity cases,
+the three `formatSessionStart` cases (`RangeError: Invalid time value`, exactly as R-02 predicted),
+and the `isFutureLocalDateTime` mirror. The leap-year case passed before the change, which confirms
+the new guard did not simply reject everything. Green after the edit: 23 tests in the file,
+30 repo-wide.
+
+**A-01 — `src/features/sessions/model/date-time.ts`.** `parseLocalDateTime` range-checks hour and
+minute against `MAX_HOUR` / `MAX_MINUTE` before constructing the `Date`, then rejects any calendar
+component the constructor normalized away. Ten rejection cases are pinned table-driven, including
+two the review did not list: `2027-02-29T10:00` (Feb 29 outside a leap year) and `0000-01-01T00:00`
+(the legacy two-digit-year remap to 1900). `2028-02-29T10:00` is asserted still valid, so the guard
+is proven to reject invalid dates rather than all edge dates. Hour and minute are deliberately not
+round-tripped through the constructed `Date`; the reason is recorded in a code comment so a future
+reader does not "tighten" it and silently break DST handling.
+
+**A-02 — same file.** `formatSessionStart` returns `""` for an unparseable instant instead of
+throwing. Three inputs are pinned (`""`, `"not-an-instant"`, `"2027-13-45"`), each asserted both
+`not.toThrow()` and `toBe("")` — the throw assertion is the one that matters, since it is the
+route-boundary escalation R-02 described. The previously untested `?? "en"` default-locale branch
+is now covered by an exact-output assertion under a fixed `timeZone`, closing nit N-05.
+
+**A-03 — `src/services/api/endpoints/sessions.types.ts`.** `SESSION_STATUSES` moved above
+`SessionStatus`; the union is now `(typeof SESSION_STATUSES)[number]`. **No test was added, on
+purpose.** Once the union is derived, any runtime assertion that the two agree is true by
+construction and would be exactly the near-tautological pattern the reviewer flagged as N-01. The
+guarantee is a compile-time one, so it was verified with a compile-time probe instead: a throwaway
+file asserting `const bad: SessionStatus = "draft"` produced exactly one `TS2322` error against the
+current tuple, and adding `"draft"` to the **tuple alone** dropped that to zero errors — the union
+now tracks the tuple automatically. The probe file and the temporary tuple edit were both reverted;
+`git status` confirms neither survives in the tree. Public surface is unchanged: same export name,
+same four members, so no import site is affected.
+
+**`list.startUnknown`.** Added to `src/shared/i18n/locales/{en,ru}/sessions.json`
+("Start time unavailable" / "Время начала недоступно") and to the key inventory in
+`src/shared/i18n/sessions-namespace.test.ts`. The namespace is now 23 keys at `en`/`ru` parity; the
+structural parity test covers the new pair automatically. No consumer renders it yet — T12 will,
+when a row's `formatSessionStart` returns `""`.
+
+**Checks run, all after the edit, none repaired by hand.** `npm run lint` initially failed on one
+Biome formatting complaint about the `new Date(...)` argument list; `npm run lint:fix` collapsed it
+to one line and lint is clean. `npm run typecheck`, `npm run test` (4 files, 30 tests), and
+`npm run build` all pass. No dependency was installed, no configuration edited, no unrelated
+refactor performed.
+
+**Scope deliberately not touched.** The `errorElement` half of R-02 remains open by design: A-02
+removes the throw at its source, and registering a route boundary in `src/app/router.tsx` is an
+`architect` / `coder` decision recorded in `api-integration.md` section 13.2. Nits N-01, N-02, N-03,
+N-04, N-06, and N-07 were likewise left alone for the reasons recorded there; N-05 is closed by this
+pass. `specs/` still does not exist and was not created — this pass establishes no durable truth
+beyond the task.
+
+**Remaining risk.** The DST behavior preserved by A-01 is machine-zone dependent and is therefore
+deliberately not asserted in the suite; it was verified once by hand under `TZ=America/New_York`
+during the contract amendment. A test that pins it would need a fixed `TZ` for the whole Vitest run,
+which `api-integration.md` section 2.1 rejects as outside this task's blast radius.
+
+### Code Review Record — `code-reviewer` role, review-remediation pass
+
+Reviewed `2026-09-02T19:08+02:00`, read-only evidence-based re-review.
+
+Review surface, stated explicitly: bounded diff of the remediation pass against commit `89fcb6d`, restricted to `src/` (6 files: `date-time.ts`, `date-time.test.ts`, `sessions.types.ts`, `locales/en/sessions.json`, `locales/ru/sessions.json`, `sessions-namespace.test.ts`). Rulesets loaded: `rulesets/common/code-reviewer` (Evidence-First Review) and `rulesets/framework/code-reviewer`.
+
+**Verdict: `PASS`.**
+
+#### Findings Status from Previous Review
+
+* **R-01 (closed):** `parseLocalDateTime` in `src/features/sessions/model/date-time.ts:28-47` now explicitly range-checks `parsedHour > 23` and `parsedMinute > 59`, and performs calendar normalization checks (`getFullYear()`, `getMonth()`, `getDate()`) against input numbers. Malformed/out-of-range dates (e.g. `2027-02-30T10:00`, `2027-13-01T10:00`, `2027-03-14T99:00`, `0000-01-01T00:00`) reliably return `null` instead of rolling over. Non-round-tripping hour/minute preserves DST transition handling. Verified by 10 table cases + leap-year test in `date-time.test.ts`.
+* **R-02 (closed):** `formatSessionStart` in `src/features/sessions/model/date-time.ts:79-82` checks `Number.isNaN(instant.getTime())` and returns `""` on unparseable input (`""`, `"not-an-instant"`, `"2027-13-45"`) rather than throwing `RangeError: Invalid time value`. `list.startUnknown` added to `en` and `ru` locale definitions. Verified with non-throwing assertions in `date-time.test.ts`.
+* **R-03 (closed):** In `src/services/api/endpoints/sessions.types.ts:8-10`, `SessionStatus` is derived as `(typeof SESSION_STATUSES)[number]`, ensuring compile-time synchronization with the runtime tuple.
+* **N-05 (closed):** Added test coverage for invalid date parsing table, leap years, `isFutureLocalDateTime` calendar rejection, `formatSessionStart` error paths, and default `"en"` locale fallback.
+
+#### Explicitly checked and verified sound
+
+1. **Architecture & layer boundaries:** No forbidden imports across ED layers (`date-time.ts` has zero dependencies on `app`, `services`, `mocks`, or `test`; `sessions.types.ts` has zero imports).
+2. **Type safety:** Strict TypeScript passes with zero errors (`tsc -b --noEmit`).
+3. **Lint & formatting:** Biome check clean (`biome check .`).
+4. **Test suite:** 4 test files, 30 tests pass (`vitest run`).
+5. **i18n parity:** 23 keys in both `en` and `ru` locale files verified structurally.
+
+#### Residual gaps and risks (non-blocking)
+
+* **Route Error Boundary:** `src/app/router.tsx` does not yet declare a route-level `errorElement`. Handled by design at the date-time helper level (A-02) to prevent escalation, but full route boundary remains deferred to route wiring in T12.
+* **DST Machine-Zone Dependency:** Spring-forward DST behavior is verified manually under `TZ=America/New_York` but not pinned in Vitest suite to prevent test failures on non-DST environments.
+* **Downstream Tasks:** Mock handlers (T2–T6) and UI presentation/forms (T9–T14) have not yet landed.
+
+Recommended next role: `coder` for T2 (`src/mocks/scenario.ts`).
 
 ## Manual Browser Observation
 

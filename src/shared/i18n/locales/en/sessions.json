@@ -7,7 +7,8 @@
     "error": {
       "message": "Training sessions could not be loaded.",
       "retry": "Try again"
-    }
+    },
+    "startUnknown": "Start time unavailable"
   },
   "filter": {
     "label": "Status",

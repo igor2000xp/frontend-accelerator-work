@@ -1,8 +1,13 @@
 export type SessionType = "training" | "camp" | "private";
-export type SessionStatus = "scheduled" | "full" | "cancelled" | "completed";
 export type SessionVisibility = "public" | "invite-only";
 
+/**
+ * Single source of truth for the status set. `SessionStatus` is derived from it, so the runtime
+ * tuple the mock filter guard validates against and the compile-time union cannot drift apart.
+ */
 export const SESSION_STATUSES = ["scheduled", "full", "cancelled", "completed"] as const;
+
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 export type CoachSummary = {
 	id: string;

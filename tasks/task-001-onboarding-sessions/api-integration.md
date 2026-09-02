@@ -12,6 +12,12 @@ current code in `src/services/api/http.ts`, `src/mocks/`, `src/app/`, `src/share
 `training/frontend-accelerator-assessment/` is **reference-only** for naming and payload shape
 (workflow-log correction 1). Nothing in `src/` imports from it.
 
+**Revision 2 (2026-09-02).** Amended in response to the `code-reviewer` `NEEDS-CHANGES` verdict on
+the first `coder` pass (base `eac2faf`, head `89fcb6d`). Findings R-01, R-02, and R-03 were all
+transcribed verbatim from revision 1 of this document, so they are contract defects and are fixed
+here first. Amendments A-01, A-02, and A-03 are recorded in **section 13**; the affected snippets in
+sections 2.1, 3, 8, 9, and 10 are the normative text and have been edited in place.
+
 ## 1. Contract Classification
 
 There is no backend and no backend owner for this task. Every element below is client-owned and
@@ -28,6 +34,9 @@ served by MSW; nothing here may be promoted to `specs/api-integration.md` as con
 | Cache strategy after create (Q-03) | Proposed here | this document |
 | `http.ts` error-body handling (Q-04) | Decided: no change | this document |
 | Seed data content and mock scenario switch (D-03, Q-07) | Proposed here | this document |
+| `datetime-local` component validity (A-01) | Proposed here, revised | this document, section 2.1 |
+| Display-time behavior on unparseable data (A-02) | Proposed here, revised | this document, sections 2.1, 8 |
+| `SessionStatus` derivation (A-03) | Proposed here, revised | this document, section 3 |
 | Blocked contract elements | None | - |
 
 ## 2. Resolved Decisions
@@ -49,22 +58,37 @@ no seconds, for example `2027-03-14T18:30`. Parse it by components rather than w
 `new Date(string)` so engine-specific string parsing cannot change the meaning:
 
 ```ts
-/** Parses a `datetime-local` value as local wall-clock time. Returns null when malformed. */
+/**
+ * Parses a `datetime-local` value as local wall-clock time.
+ * Returns null when the value is malformed **or names a calendar date that does not exist**.
+ */
 export function parseLocalDateTime(value: string): Date | null {
 	const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim());
 	if (!match) return null;
 	const [, year, month, day, hour, minute] = match;
 	if (!year || !month || !day || !hour || !minute) return null;
-	const date = new Date(
-		Number(year),
-		Number(month) - 1,
-		Number(day),
-		Number(hour),
-		Number(minute),
-		0,
-		0,
-	);
-	return Number.isNaN(date.getTime()) ? null : date;
+
+	const y = Number(year);
+	const m = Number(month);
+	const d = Number(day);
+	const h = Number(hour);
+	const min = Number(minute);
+
+	// Range-check the clock components first: the Date constructor would otherwise carry an
+	// out-of-range hour or minute into the calendar date (`T99:00` becomes "+4 days, 03:00").
+	if (h > 23 || min > 59) return null;
+
+	const date = new Date(y, m - 1, d, h, min, 0, 0);
+	if (Number.isNaN(date.getTime())) return null;
+
+	// Reject any calendar component the constructor normalized away: month 13 rolls into the next
+	// year, month 00 into the previous one, and Feb 30 into March. Hour and minute are deliberately
+	// NOT round-tripped here — see the DST note below.
+	if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+		return null;
+	}
+
+	return date;
 }
 
 /** ISO 8601 UTC, second precision, e.g. `2027-03-14T17:30:00Z`. */
@@ -91,10 +115,35 @@ export function isFutureLocalDateTime(value: string, now: Date = new Date()): bo
 }
 ```
 
-Consequences, matching AC-17: an empty or malformed value is invalid; a past value is invalid;
-**the current minute is rejected** (at `18:30:42` the value `18:30` floors to the same bucket, so
-it is not strictly greater); `18:31` is accepted. A DST spring-forward gap time rolls forward to
-the next existing instant, which is standard `Date` behavior and acceptable here.
+Consequences, matching AC-17: an empty or malformed value is invalid; a **non-existent calendar
+date is invalid** (see the validity table below); a past value is invalid; **the current minute is
+rejected** (at `18:30:42` the value `18:30` floors to the same bucket, so it is not strictly
+greater); `18:31` is accepted.
+
+**Component validity (amendment A-01, see section 13).** `new Date(y, m - 1, d, h, min)` normalizes
+out-of-range components instead of rejecting them, so a shape-only regex is not a validity check.
+The two guards above close that hole:
+
+| Input | Before the guards | After the guards |
+| --- | --- | --- |
+| `2027-02-30T10:00` | `Tue Mar 02 2027 10:00` | `null` |
+| `2027-13-01T10:00` | `Sat Jan 01 2028 10:00` | `null` |
+| `2027-00-10T10:00` | `Thu Dec 10 2026 10:00` | `null` |
+| `2027-03-14T99:00` | `Thu Mar 18 2027 03:00` | `null` |
+| `2027-03-14T18:60` | `Sun Mar 14 2027 19:00` | `null` |
+| `2027-03-14T18:30` | `Sun Mar 14 2027 18:30` | unchanged |
+
+A rejected value is indistinguishable from an empty one at the boundary: `isFutureLocalDateTime`
+returns `false`, AC-17 blocks the submit, and `sessions:form.validation.startsAtFuture` is shown. No
+new i18n key and no new validation branch is introduced.
+
+**DST is deliberately unchanged.** Hour and minute are range-checked numerically rather than
+round-tripped through the constructed `Date`, because a spring-forward gap time (`02:30` on a
+transition day in a zone that skips 02:00-03:00) legitimately rolls forward to the next existing
+instant on the **same calendar day**. Round-tripping `getHours()` would reject it and surface a
+misleading "must be in the future" message for a date the user picked correctly. The year/month/day
+round-trip still holds in zones whose transition sits at midnight, since the rolled instant keeps
+its calendar day.
 
 **Re-run on submit.** The rule runs twice: on change/blur for the inline message (AC-18) and again
 as the first statement of the submit handler with a fresh `new Date()`, before the request body is
@@ -113,15 +162,18 @@ what protects a form that sat open across a minute boundary.
    explicit zone and assert through it:
 
 ```ts
+/** Renders an ISO UTC instant. Returns "" for an unparseable instant; never throws on input. */
 export function formatSessionStart(
 	isoUtc: string,
 	options?: { locale?: string; timeZone?: string },
 ): string {
+	const instant = new Date(isoUtc);
+	if (Number.isNaN(instant.getTime())) return "";
 	return new Intl.DateTimeFormat(options?.locale ?? "en", {
 		dateStyle: "medium",
 		timeStyle: "short",
 		timeZone: options?.timeZone,
-	}).format(new Date(isoUtc));
+	}).format(instant);
 }
 ```
 
@@ -217,10 +269,15 @@ wrapper at runtime.
 
 ```ts
 export type SessionType = "training" | "camp" | "private";
-export type SessionStatus = "scheduled" | "full" | "cancelled" | "completed";
 export type SessionVisibility = "public" | "invite-only";
 
+/**
+ * Single source of truth for the status set. `SessionStatus` is derived from it, so the runtime
+ * tuple the mock validates against and the compile-time union can never drift apart (A-03).
+ */
 export const SESSION_STATUSES = ["scheduled", "full", "cancelled", "completed"] as const;
+
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 export type CoachSummary = {
 	id: string;
@@ -305,8 +362,11 @@ export type ApiErrorBody = {
 ```
 
 `SESSION_STATUSES` is a value, so it lives here only if the file is allowed to export one; if the
-project prefers types-only files, move the constant to `sessions.ts`. The mock uses it to validate
-the `status` parameter.
+project prefers types-only files, move the constant to `sessions.ts` — **and move `SessionStatus`
+with it**, because the union is now derived from the tuple and the two must stay in one file. The
+mock uses the tuple to validate the `status` parameter, and every `sessions:status.*` i18n key in
+section 9 corresponds to one entry, so adding a status is a single edit with three compile-time
+consequences instead of a silent divergence.
 
 ## 4. Endpoint Wrappers
 
@@ -620,6 +680,7 @@ No handler ever reads application state, and no application module ever reads a 
 | List success | `200`, `data.length > 0` | One row per session: title, translated status label, `formatSessionStart(startsAt)` | `sessions:status.*` | AC-01, AC-02, AC-07 |
 | List empty | `200`, `data.length === 0` | Translated empty message, no error | `sessions:list.empty` | AC-06 |
 | List error | any rejection from `listSessions` (`HttpError` or network) | One generic translated message plus a retry control; no status code, no `error.message` from the body | `sessions:list.error.message`, `sessions:list.error.retry` | AC-04 |
+| Row with unparseable `startsAt` | `200`, a row whose `startsAt` is empty or not an ISO instant | `formatSessionStart` returns `""`; the row renders the translated placeholder in the time position and is otherwise normal. **No throw**, so the route-level error boundary is never reached and AC-04 stays the only error surface | `sessions:list.startUnknown` | A-02 (see section 13) |
 | List retry | retry control -> `refetch()` | Re-issues the same `GET`; success replaces the error state in place | - | AC-05 |
 | Filter change | `All` <-> `Scheduled` | New query key, new `GET`, previous request aborted via `signal` | `sessions:filter.*` | AC-08..AC-11 |
 | Validation blocked | title or start invalid at submit time | No `POST` issued; message rendered next to the field | `sessions:form.validation.*` | AC-15, AC-17..AC-19 |
@@ -628,6 +689,13 @@ No handler ever reads application state, and no application module ever reads a 
 | Create failure | `500` / network | **No message** (D-06). `isPending` returns to `false`, form values kept, submit usable again | - | D-06 guardrail |
 
 Nothing in this matrix leaks a status code, a URL, a stack, or an English-only server string.
+
+**Rendering never throws (A-02).** A `RangeError` raised while rendering a row would unmount the
+whole route through React Router's boundary and replace AC-04's in-place, translated, retryable
+error with a generic screen. That failure mode is closed inside the helper rather than by adding an
+`errorElement`, which keeps the fix in the data-shaping layer this document owns. Registering a
+route-level `errorElement` remains a reasonable defence-in-depth measure, but it is `architect` /
+`coder` territory and is explicitly **not** required to satisfy this contract.
 
 ## 9. i18n Keys Required By The Integration
 
@@ -643,7 +711,8 @@ Namespace `sessions`, registered in the `resources` map in `src/shared/i18n/inde
     "error": {
       "message": "Training sessions could not be loaded.",
       "retry": "Try again"
-    }
+    },
+    "startUnknown": "Start time unavailable"
   },
   "filter": { "label": "Status", "all": "All", "scheduled": "Scheduled" },
   "status": {
@@ -671,7 +740,8 @@ Namespace `sessions`, registered in the `resources` map in `src/shared/i18n/inde
     "error": {
       "message": "Не удалось загрузить тренировки.",
       "retry": "Повторить"
-    }
+    },
+    "startUnknown": "Время начала недоступно"
   },
   "filter": { "label": "Статус", "all": "Все", "scheduled": "Запланированные" },
   "status": {
@@ -691,8 +761,12 @@ Namespace `sessions`, registered in the `resources` map in `src/shared/i18n/inde
 }
 ```
 
-Form labels, the open-form control, and the submit label are `ui-designer` copy and are not
-mandated here. `common:action.retry` already exists and may be reused instead of
+`list.startUnknown` is required by A-02: it is what the row shows when `formatSessionStart`
+returns `""`. It is integration-owned copy, not decoration — without it the row would either render
+an empty cell or a hardcoded string, and the second violates AC-24.
+
+Form labels, the open-form control, the submit label, and any form cancel/dismiss control are
+`ui-designer` copy and are not mandated here. `common:action.retry` already exists and may be reused instead of
 `sessions:list.error.retry`; pick one and keep it consistent.
 
 ## 10. Test Strategy For The Integration Boundary
@@ -713,6 +787,16 @@ Owned by `test-generator` / `coder`; listed here as the integration-side expecta
 5. **AC-06**: `server.use` returning `{ data: [], meta: { page: 1, pageSize: 10, total: 0 } }`.
 6. **AC-02 / Q-01**: the two unit tests described in section 2.1 (explicit `timeZone` formatting,
    `vi.setSystemTime` for the current-minute rejection).
+6b. **A-01 component validity** (new, required): a table-driven unit test asserting
+   `parseLocalDateTime` returns `null` for every row of the section 2.1 validity table
+   (`2027-02-30T10:00`, `2027-13-01T10:00`, `2027-00-10T10:00`, `2027-03-14T99:00`,
+   `2027-03-14T18:60`) and a `Date` for `2027-03-14T18:30`. Add the mirror assertion that
+   `isFutureLocalDateTime("2027-02-30T10:00")` is `false`, since that is the path AC-17 actually
+   guards. Do not assert DST behavior — it is machine-zone dependent.
+6c. **A-02 rendering guard** (new, required): `formatSessionStart("")` and
+   `formatSessionStart("not-an-instant")` each return `""` and do not throw; and
+   `formatSessionStart("2027-08-03T16:00:00Z")` with no `locale` falls back to `en`, which also
+   closes the untested `?? "en"` branch.
 7. **AC-24**: `await i18n.changeLanguage("ru")` and assert one integration-owned string, for
    example the list error message, then restore `en`.
 8. `beforeEach(resetSessionsDb)` in any file that creates sessions.
@@ -733,6 +817,9 @@ Owned by `test-generator` / `coder`; listed here as the integration-side expecta
 | F-05 (`meta.total` after filtering) | Section 7.4 |
 | F-06 (full POST body, no fabricated idempotency) | Sections 3, 4, 5.2 |
 | Manual API mode, no `fetch` in features | Sections 4, 5 |
+| A-01 component validity (review R-01) | Sections 2.1, 10.6b, 13 |
+| A-02 rendering never throws (review R-02) | Sections 2.1, 8, 9, 10.6c, 13 |
+| A-03 status union derived from the tuple (review R-03) | Sections 3, 13 |
 
 ## 12. Risks And Residual Gaps
 
@@ -753,6 +840,77 @@ Owned by `test-generator` / `coder`; listed here as the integration-side expecta
    the `{ once: true }` override.
 6. **Test import of `@/mocks/server`** from a colocated feature test — see the layering note in
    section 7.3. Needs one explicit call from the developer or `code-reviewer`.
-7. **No backend owner exists.** Every element in section 1 marked "reference-shaped" or "proposed"
+7. **`parseLocalDateTime` still accepts a DST spring-forward gap time** and rolls it to the next
+   existing instant on the same calendar day (section 2.1). This is deliberate: rejecting it would
+   show "must be in the future" for a date the user picked correctly. The user-visible consequence
+   is that the created session's UTC instant is one hour later than the wall-clock time typed, on
+   one day a year, in zones that observe DST. Accepted; revisit only if a real backend rejects it.
+8. **`formatSessionStart` can still throw on a bad `timeZone` option**, because
+   `Intl.DateTimeFormat` rejects an unknown zone identifier with a `RangeError`. That argument is
+   supplied by test code and by the caller, never by response data, so A-02 does not guard it. Do
+   not start passing a server-provided zone into it without re-opening this contract.
+9. **No backend owner exists.** Every element in section 1 marked "reference-shaped" or "proposed"
    is client-owned. If this repository later gains a real backend, all of it needs re-confirmation,
    and none of it belongs in `specs/api-integration.md` today.
+
+## 13. Amendment Record — Revision 2
+
+Trigger: `code-reviewer` verdict `NEEDS-CHANGES`, reviewed `2026-09-02T18:37+02:00`, review surface
+base `eac2faf` -> head `89fcb6d` restricted to `src/` (8 files). The record of that review lives in
+`workflow-log.md` under "Code Review Record". No production code, test, or ruleset is edited by this
+document; the `coder` role applies the amendments.
+
+**Provenance finding, accepted without dispute.** All three should-fix findings quote code that
+revision 1 of this document dictated verbatim. The `coder` role reproduced the accepted contract
+faithfully, which is the correct behavior under Contract Authority. The defect is upstream, so the
+contract is amended first and the implementation follows.
+
+| Id | Closes | Change | Normative location |
+| --- | --- | --- | --- |
+| A-01 | R-01 | `parseLocalDateTime` range-checks hour and minute, then rejects any calendar component the `Date` constructor normalized away. The docstring's "returns null when malformed" promise is now true. DST spring-forward roll-forward is preserved on purpose. | Section 2.1 |
+| A-02 | R-02 | `formatSessionStart` returns `""` for an unparseable instant instead of throwing `RangeError`. The list row renders `sessions:list.startUnknown` in that position. AC-04 remains the only error surface for the list. | Sections 2.1, 8, 9 |
+| A-03 | R-03 | `SessionStatus` is derived as `(typeof SESSION_STATUSES)[number]` instead of being declared independently, so the runtime tuple and the compile-time union cannot drift. | Section 3 |
+
+### 13.1 What changed for the `coder` role
+
+Three files from the first pass are affected. All three changes are additive and local; no signature
+in sections 4 or 5 changes, and no consumer needs rewriting.
+
+1. `src/features/sessions/model/date-time.ts` — replace `parseLocalDateTime` and
+   `formatSessionStart` with the section 2.1 bodies.
+2. `src/services/api/endpoints/sessions.types.ts` — reorder `SESSION_STATUSES` above
+   `SessionStatus` and derive the union, per section 3. `SessionStatus` stays exported with the same
+   name and the same four members, so every import site is unaffected and this is not a breaking
+   change.
+3. `src/shared/i18n/locales/{en,ru}/sessions.json` — add `list.startUnknown` in both locales, per
+   section 9. The existing key-parity test covers the pair automatically.
+
+Tests to add: section 10 items 6b and 6c. They also close review nit N-05 (nothing pinned the
+rollover behavior, the invalid-input path, or the `?? "en"` default-locale branch).
+
+### 13.2 Review items deliberately NOT changed by this amendment
+
+Recorded so the next role does not read the silence as an oversight.
+
+* **R-02's `errorElement` half.** The reviewer correctly notes that `src/app/router.tsx` registers
+  no `errorElement`. A-02 removes the throw at its source, which is this document's remit. Whether
+  the router additionally gains a boundary is an `architect` / `coder` decision about `src/app/`,
+  a layer this document does not own. Not a blocker for the contract.
+* **N-01** (near-tautological type test), **N-06** (exact-copy i18n assertions), **N-07** (test-count
+  drift versus the plan): test-authoring judgment, owned by `coder` / `test-generator`.
+* **N-02** (`react-i18next` `CustomTypeOptions` augmentation): a repository-wide typing safeguard in
+  `src/shared/i18n/`, worth doing and cheap, but it is not an API contract element and would apply
+  to `common` as much as to `sessions`. Left to `architect` / `coder`.
+* **N-03** (`en.list.heading` duplicating `en.list.ariaLabel`): both keys are `ui-designer` copy
+  added during implementation; neither appears in section 9. The reviewer's `aria-labelledby`
+  suggestion is the right call and belongs to `ui-designer` / `coder`.
+* **N-04** (no form cancel/dismiss key): section 9 already assigns form control copy to
+  `ui-designer`. The key should be added when T14 introduces the control, not speculatively.
+
+### 13.3 Unresolved questions for a backend owner
+
+Unchanged by this revision: there is still no backend and no backend owner. A-01 and A-02 are
+client-side validity and rendering guards over a client-owned mock; they assert nothing about server
+behavior. If this repository later gains a real backend, the question to ask is whether the server
+rejects a non-existent calendar date and what it returns for one — until then, nothing in this
+document may be promoted to `specs/api-integration.md`.
