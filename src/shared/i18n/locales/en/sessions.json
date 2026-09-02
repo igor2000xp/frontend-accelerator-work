@@ -1,0 +1,36 @@
+{
+  "list": {
+    "heading": "Training sessions",
+    "ariaLabel": "Training sessions",
+    "loading": "Loading sessions…",
+    "empty": "No training sessions yet.",
+    "error": {
+      "message": "Training sessions could not be loaded.",
+      "retry": "Try again"
+    }
+  },
+  "filter": {
+    "label": "Status",
+    "all": "All",
+    "scheduled": "Scheduled"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "full": "Full",
+    "cancelled": "Cancelled",
+    "completed": "Completed"
+  },
+  "form": {
+    "open": "New session",
+    "heading": "Create a session",
+    "title": { "label": "Title" },
+    "startsAt": { "label": "Start date and time" },
+    "submit": "Create session",
+    "pending": "Creating…",
+    "validation": {
+      "titleLength": "Enter a title between 3 and 80 characters.",
+      "startsAtRequired": "Enter a start date and time.",
+      "startsAtFuture": "The start date and time must be in the future."
+    }
+  }
+}

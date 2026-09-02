@@ -28,6 +28,9 @@ Doctor evidence at start: `training/frontend-accelerator-onboarding/workflow-log
 | `2026-09-02T04:18-04:23+02:00` | `developer (no role)` | `n/a — environment bootstrap, outside the timebox` | `Vite 7 + React 19 + TS 5.9 strict app initialized; ED layers, Tailwind 4, React Router 7, TanStack Query 5, i18next en+ru, Biome, MSW, Vitest wired. build / typecheck / lint / test all pass; dev server renders the shell with MSW active. Doctor re-run: READY.` | `accept` | `manually select requirements-analyst` |
 | `2026-09-02T06:02-06:07+02:00` | `requirements-analyst` | verbatim in "Prompt: requirements-analyst" below | `tasks/task-001-onboarding-sessions/requirements.md` — 27 acceptance criteria (AC-01..AC-27), non-goals from TASK.md "Explicitly Optional", facts F-01..F-12, assumptions A-01..A-08, open questions Q-01..Q-08, decisions D-01..D-06, specialist gaps for architect / api-integration / ui-designer. Verdict: ready for planning with recorded decisions. Role STOPped. | `accept with corrections` — coverage checked against TASK.md and factual claims spot-checked; two developer corrections recorded below (assessment material is reference-only; mock data authored locally) | `manually select writing-plans`, with D-01..D-06 answered in the prompt |
 | `2026-09-02T15:59+02:00` | `api-integration` | verbatim in "Prompt: api-integration" below | `tasks/task-001-onboarding-sessions/api-integration.md` — Q-01 minute-bucket future rule with an injectable formatter timezone, Q-02 omit-empty query params, Q-03 invalidate-and-refetch only, Q-04 no change to `http.ts`, Q-07 `server.use` in tests plus a `?mock=` switch in the browser, D-02 defaults owned by the feature model, plus types, wrapper signatures, seed data, handler algorithms, and `sessions` i18n keys in en and ru. Role STOPped. | `accept with two clarifications` — recorded below | `manually select writing-plans` |
+| `2026-09-02T18:01-18:03+02:00` | `coder` (Lane A, mock/data boundary) | verbatim in "Prompt: coder (parallel first pass)" below, Lane A section | `src/services/api/endpoints/sessions.types.ts` + colocated test. T1 only: the shared transport types plus the runtime `SESSION_STATUSES` tuple (FR-01, FR-02). One TDD cycle: red was the expected unresolved-import error, then green (2 tests). `npm run lint:fix` clean. Role STOPped after T1 as instructed. | `pending developer review` — orchestrator verified the three repo-wide gates after convergence; the exported surface still needs the developer's sign-off because T3-T6 and T9-T14 bind to it | `developer go-ahead, then re-dispatch Lane A for T2 (src/mocks/scenario.ts)` |
+| `2026-09-02T18:01-18:05+02:00` | `coder` (Lane B, presentation foundations) | verbatim in "Prompt: coder (parallel first pass)" below, Lane B section | T7: complete `sessions` i18n namespace, 22 keys, `en` + `ru` at parity, registered in the `resources` map and the `ns` array of `src/shared/i18n/index.ts`. T8: `src/features/sessions/model/date-time.ts` with `parseLocalDateTime`, `toIsoUtcSeconds`, `isFutureLocalDateTime`, `formatSessionStart` (injectable `timeZone` per Q-01). Two TDD cycles, both red-then-green (4 tests, then 7). Role STOPped after T8 without starting T9. | `pending developer review` — key parity and the seven FR-07 presentation keys independently re-verified by the orchestrator | `hold; T9 onward is sequential and consumes Lane A's T1 contract` |
+| `2026-09-02T18:20+02:00` | `verify` | `Запусти команду verify, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **PASS**. Four applicable project-defined checks selected and run read-only against the converged tree: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` — all exit `0`. `npm run format` excluded as state-writing; e2e `NOT-APPLICABLE` (no Playwright or Cypress config). No failure repaired, no dependency installed, no configuration edited. Role STOPped after the verdict. | `pending developer review` — verdict is scoped to T1/T7/T8; it does not evidence any acceptance criterion that needs UI, MSW handlers, or the routed workspace, none of which exist yet | `developer go-ahead, then re-dispatch Lane A for T2 (src/mocks/scenario.ts)` |
 
 Add one row for each role invocation or important correction. Preserve each prompt exactly, but do
 not copy full role responses into this file.
@@ -182,6 +185,209 @@ no `ai/recipes/`, no `ai/prompts/`, no `.claude/skills/react-spa-best-practices/
 `npm run scaffold:*` scripts, although `AGENTS.md` references all of them. The application was
 therefore bootstrapped by the developer before the role sequence, which the README places outside
 the timebox. The `coder` prompt stays bounded to the feature slice.
+
+### Prompt: coder (parallel first pass)
+
+Two `coder` agents were dispatched in parallel in one message. The prompt below is the developer's
+verbatim instruction to the orchestrator; each agent received the shared rules plus only its own
+lane section.
+
+```text
+# First-launch prompt — task-001-onboarding-sessions
+
+Launch the first implementation pass for `task-001-onboarding-sessions` using **two `coder`
+agents dispatched in parallel, in one message**.
+
+## Context engineering rules — apply to BOTH agents
+
+**Knowledge base.** Read only these, in this authority order. Do not scan the repository broadly,
+and do not read the other lane's task sections.
+
+1. `training/frontend-accelerator-onboarding/TASK.md` — wins on any conflict
+2. `tasks/task-001-onboarding-sessions/implementation-plan.md` — the step-by-step plan; read the
+   header (lines 1–146) plus **only your own lane's task sections**
+3. `tasks/task-001-onboarding-sessions/requirements.md` — AC-01..AC-27 are binding (AC-22 dropped)
+4. `tasks/task-001-onboarding-sessions/api-integration.md` — binding contract: types, wrapper
+   signatures, query keys, POST defaults, seed data, scenario switch, handler algorithms, i18n keys
+5. `tasks/task-001-onboarding-sessions/workflow-log.md` — Developer Decisions D-01..D-06 are binding
+6. `ARCHITECTURE.md` (sections 3–8, 10), `AGENTS.md`,
+   `.claude/skills/react-spa-best-practices/SKILL.md`
+7. The specific source files your task sections name — nothing else
+
+There is **no `specs/` folder** in this project. Do not look for one and do not create one.
+`training/frontend-accelerator-assessment/` is reference-only; no file under `src/` may import it.
+
+**Isolation and parallelism.** Parallel agents for the mock/data boundary and the presentation
+foundations. The two lanes touch strictly disjoint file sets. Never create, edit, or read-then-
+assume a file owned by the other lane. If you believe you need something from the other lane, STOP
+and report it as a blocker instead of writing a placeholder.
+
+**Architectural standard.** This is a client-only Vite React 19 SPA. There is no backend, no
+NestJS, and no Controller/Service/Repository layering. Write code strictly in the ED small-layer
+architecture from `ARCHITECTURE.md`:
+
+* `src/app` — routing, providers, layout
+* `src/features/<feature>/{model,ui}` — TanStack Query hooks and pure logic in `model/`,
+  components in `ui/`
+* `src/services` — typed fetch wrappers and transport types
+* `src/shared` — i18n, `cn()`, shadcn/ui primitives
+
+Import rules are hard: features must not import app; services must not import app or features;
+shared must not import app, features, or services; none of the four layers may import from
+`src/mocks` or `src/test`. Apply the React best-practice rules in
+`rulesets/framework/shared/react-best-practices/`. Do not add `useMemo`/`useCallback` without a
+proven need.
+
+**File naming.** Use the **exact** paths in the plan's "Files Touched" table. Do **not** prefix
+files with your skill name — that would break the plan's import graph. Tests are colocated as
+`<module>.test.ts(x)`.
+
+**Working rhythm — one TDD cycle per task, no batching.** For each task:
+1. Write the failing test.
+2. `npx vitest run <test file>` — confirm **red**, and that the failure is the expected one.
+3. Write the minimal implementation.
+4. `npx vitest run <test file>` — confirm **green**.
+5. `npm run lint:fix`.
+
+**Step-by-step control.** Execute your lane's tasks strictly one at a time. After each single
+atomic task, stop, list the changed files, and give a short summary of behavior implemented and
+checks run with their real results. **Do not `git add`, `git commit`, or push anything** — this
+overrides step 5 of the plan's Working Rhythm. I will commit. Do not start the next task without
+my explicit go-ahead. Never claim a check you did not run.
+
+## Lane A — mock/data boundary
+
+Tasks **T1 → T2 → T3 → T4 → T5 → T6**, in that order. Read plan sections T1–T6 only.
+
+Owns: `src/services/api/endpoints/sessions.types.ts`, `src/mocks/scenario.ts`,
+`src/mocks/data/sessions.seed.ts`, `src/mocks/db/sessions-db.ts`, `src/mocks/handlers.ts`,
+`src/services/api/endpoints/sessions.ts`, `src/test/msw.ts`, and their colocated tests.
+
+Stop after **T1** for my go-ahead — T1's exported types are the contract Lane B's later work
+depends on.
+
+## Lane B — presentation foundations
+
+Tasks **T7 → T8**, in that order. Read plan sections T7 and T8 only. The plan states both are
+independent of T1–T6 and of each other.
+
+Owns: `src/shared/i18n/locales/en/sessions.json`, `src/shared/i18n/locales/ru/sessions.json`,
+`src/shared/i18n/sessions-namespace.test.ts`, `src/shared/i18n/index.ts` (register the namespace
+only), `src/features/sessions/model/date-time.ts` and its test.
+
+Author the **complete** `sessions` namespace in T7 — the `api-integration.md` section 9 keys plus
+the seven presentation keys the plan resolves under FR-07 — in both `en` and `ru`. No hardcoded
+UI strings anywhere.
+
+Stop after **T8**. Do not start T9: it consumes `CreateSessionRequest` from Lane A's T1.
+
+## After both lanes report
+T9 onward is strictly sequential per the dependency map. Converge, commit, then continue
+single-lane.
+```
+
+### Convergence Record — coder first pass (T1, T7, T8)
+
+Converged `2026-09-02T18:05+02:00`. The developer stopped the command here; T2 was not dispatched.
+
+Files produced. Nothing staged, nothing committed — the no-commit rule in the dispatch prompt
+overrode step 5 of the plan's Working Rhythm.
+
+| File | Lane | State |
+| --- | --- | --- |
+| `src/services/api/endpoints/sessions.types.ts` | A (T1) | new, untracked |
+| `src/services/api/endpoints/sessions.types.test.ts` | A (T1) | new, untracked |
+| `src/shared/i18n/locales/en/sessions.json` | B (T7) | new, untracked |
+| `src/shared/i18n/locales/ru/sessions.json` | B (T7) | new, untracked |
+| `src/shared/i18n/sessions-namespace.test.ts` | B (T7) | new, untracked |
+| `src/shared/i18n/index.ts` | B (T7) | modified, registration only (+5/-3) |
+| `src/features/sessions/model/date-time.ts` | B (T8) | new, untracked |
+| `src/features/sessions/model/date-time.test.ts` | B (T8) | new, untracked |
+
+`src/services/api/endpoints/.gitkeep` was deliberately left in place; its removal belongs to T6.
+
+Gates re-run by the orchestrator against the converged tree, not taken from the agents' reports:
+
+| Command | Real result |
+| --- | --- |
+| `npm run typecheck` | pass, no output |
+| `npm run lint` | `Checked 40 files in 42ms. No fixes applied.` |
+| `npm run test` | `Test Files 4 passed (4)`, `Tests 14 passed (14)` |
+
+Independently re-verified, rather than accepted on report: the `sessions` namespace holds 22 keys
+with `en`/`ru` parity `true`, covering the 15 `api-integration.md` section 9 keys plus the seven
+FR-07 presentation keys (`list.heading`, `list.ariaLabel`, `form.open`, `form.heading`,
+`form.title.label`, `form.startsAt.label`, `form.submit`).
+
+Isolation held. Neither lane created, edited, or imported a file owned by the other, and no
+placeholder was written for a cross-lane dependency.
+
+Findings carried forward:
+
+1. **Plan defect, T8 step 8.4.** The plan's prose predicts `Tests 8 passed (8)`, but the test file
+   the plan dictates contains seven `it(...)` blocks; the real result is `7 passed (7)`, confirmed
+   by counting the source. Lane B transcribed the plan verbatim instead of inventing an eighth
+   case to make the prose true. AC-02 and AC-17 are both covered. This is an arithmetic slip in
+   the plan, for `code-reviewer` to close.
+2. **Transient cross-lane typecheck failure, not a defect.** Lane A's mid-flight `npm run
+   typecheck` failed on `src/shared/i18n/sessions-namespace.test.ts` with TS2307 for the two
+   locale JSON files, because Lane B was then in its red phase. It resolved on its own once T7
+   landed, and the converged typecheck passes. A predictable cost of parallel TDD lanes: a
+   repo-wide gate run by one lane observes the other lane's red phase.
+3. **One unattributable lint fix.** T7's step 5 `npm run lint:fix` reported `Fixed 1 file` while
+   Lane A's untracked files were already on disk. Biome does not name the file, so neither lane
+   can say whose file was reformatted. Formatting-only either way, and the repository is lint-clean
+   now. Lane B scoped its T8 lint to `npx biome check --write src/features/sessions/
+   src/shared/i18n/` to avoid repeating it. Worth making repo-wide `lint:fix` a converge-time step
+   rather than a per-lane one in any future parallel pass.
+
+State at stop: T1, T7, T8 done and unreviewed by the developer; T2-T6 and T9-T15 not started. The
+`writing-plans` role has no row in the Role Decisions table above even though
+`implementation-plan.md` exists and was used as the authority for this pass; that row is missing
+and should be backfilled by the developer.
+
+### Verification Record — `verify` role, coder first pass
+
+Run `2026-09-02T18:20+02:00`, read-only, against the converged working tree described in the
+Convergence Record above. Nothing was staged, committed, installed, or repaired.
+
+Check selection. The Application Root is the Repository Root: a single `package.json`, one
+`package-lock.json`, no monorepo workspaces, so no application-root disambiguation was needed.
+
+| Check | Command | Exit code | Decisive output |
+| --- | --- | --- | --- |
+| Lint + format diagnostics | `npm run lint` (`biome check .`) | `0` | `Checked 40 files in 9ms. No fixes applied.` |
+| Typecheck | `npm run typecheck` (`tsc -b --noEmit`) | `0` | no output |
+| Unit / integration tests | `npm run test` (`vitest run`) | `0` | `Test Files 4 passed (4)`, `Tests 14 passed (14)` |
+| Production build | `npm run build` (`tsc -b && vite build`) | `0` | `✓ 120 modules transformed`, `✓ built in 864ms`, `dist/assets/index-D9TLlf3l.js 364.10 kB │ gzip: 116.53 kB` |
+
+Checks deliberately not run, with reasons:
+
+* `npm run format` — it is `biome format --write .`, which mutates files. Excluded because
+  verification is read-only; `npm run lint` already reports formatting diagnostics without writing.
+* End-to-end — `NOT-APPLICABLE`. No `playwright.config.*` or `cypress.config.*` exists, and the
+  requirements Non-Goals exclude e2e from this task.
+* `npm run dev`, `npm run preview`, `npm run test:watch` — long-running servers/watchers, not
+  verification gates. The manual browser check remains outstanding and is recorded separately
+  under "Manual Browser Observation".
+
+**Verdict: `PASS`.**
+
+All four applicable checks pass. Build output goes to `dist/`, which `.gitignore` line 6 already
+ignores; `git status --porcelain` after the run shows only the pre-existing working-tree changes
+from the coder pass plus this log, so verification itself modified no tracked file.
+
+Scope caveat, stated so the verdict is not read wider than it is. `PASS` covers only what the
+first coder pass produced — T1, T7, T8. The 14 passing tests are 1 pre-existing shell smoke test,
+2 transport-type tests, 4 i18n namespace tests, and 7 date/time helper tests. No acceptance
+criterion requiring the MSW handlers, the endpoint wrappers, the TanStack Query hooks, or the
+routed `/sessions` workspace is evidenced by this run, because none of that code exists yet
+(T2-T6, T9-T15 not started). This is a green gate on a partial implementation, not a green gate
+on the task.
+
+The `vitest list` inventory also independently re-confirms finding 1 of the Convergence Record:
+`src/features/sessions/model/date-time.test.ts` contributes exactly seven test cases, not the
+eight the plan's T8 prose predicts.
 
 ## Manual Browser Observation
 
