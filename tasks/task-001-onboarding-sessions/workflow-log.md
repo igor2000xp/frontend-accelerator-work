@@ -901,6 +901,97 @@ No blocking or should-fix findings.
 
 Recommended next role: `coder` for T3–T6 (`src/mocks/data/sessions.seed.ts`, `src/mocks/db/sessions-db.ts`, `src/mocks/handlers.ts`, `src/services/api/endpoints/sessions.ts`, `src/test/msw.ts`).
 
+### Coder Record — T3-T6 (mock boundary) and T10-T14 (routed workspace)
+
+Implemented `2026-09-02T20:00+02:00`. Application Root is the Repository Root. Rulesets loaded:
+`rulesets/common/coder` (TypeScript And Project Fit, Essential Behavior Tests) and
+`rulesets/framework/coder` (the React sections apply to T12-T14). No runtime documentation lookup
+was needed: every API used here is already in the repository (`msw`, `@tanstack/react-query`,
+`react-router`, `react-i18next`), so no `ctx7` call was made and no documentation evidence is
+claimed.
+
+**Commits deliberately not made.** The developer asked to own the commits; every plan step ending in
+`git commit` was skipped. The whole change sits uncommitted in the working tree.
+
+**TDD, nine cycles, one per task.** Each cycle wrote the test file first and ran it red before any
+production file existed. Red was verified specific, not merely assumed:
+
+| Task | Red observed | Green |
+| --- | --- | --- |
+| T3 seed | `Failed to resolve import "./sessions.seed"` | 6 passed |
+| T4 store | `Failed to resolve import "./sessions-db"` | 5 passed |
+| T5 handlers | 7 failed, all `[MSW] Cannot bypass a request when using the "error" strategy` — the empty handler array, exactly as the plan predicted | 7 passed |
+| T6 wrappers | `Failed to resolve import "@/test/msw"` | 5 passed |
+| T10 list query | `Failed to resolve import "./sessions-query"` | 4 passed |
+| T11 create mutation | `Failed to resolve import "./use-create-session-mutation"` | 2 passed |
+| T12 list UI | `Failed to resolve import "@/test/render-app"` | 7 passed |
+| T13 filter | 3 failed, `Unable to find a label with the text of: Status` | 3 passed |
+| T14 form | 5 failed, `Unable to find an accessible element with the role "button" and name "New session"` | 5 passed |
+
+**Files created (17).** `src/mocks/data/sessions.seed.ts` + test; `src/mocks/db/sessions-db.ts` +
+test; `src/mocks/handlers.test.ts`; `src/services/api/endpoints/sessions.ts` + test;
+`src/test/msw.ts`; `src/test/render-app.tsx`;
+`src/features/sessions/model/{sessions-query.ts,use-create-session-mutation.ts}` + their two tests;
+`src/features/sessions/ui/{SessionsList.tsx,SessionsListSection.tsx,SessionsWorkspacePage.tsx,StatusFilter.tsx,CreateSessionForm.tsx}`
+plus `SessionsWorkspacePage.{list,filter,create}.test.tsx`; `src/features/sessions/index.ts`.
+
+**Files modified (3), deleted (1).** `src/mocks/handlers.ts` (both endpoints registered),
+`src/app/router.tsx` (`/` redirects to `/sessions`; `/sessions` renders the workspace through the
+feature barrel), `src/app/App.smoke.test.tsx` (now asserts the redirect rather than passing
+incidentally). `src/services/api/endpoints/.gitkeep` deleted — the directory now holds real modules.
+
+**Behavior implemented.** `GET /api/sessions` serves the five-record seed from an in-memory store,
+filters by `status`, computes `meta.total` after filtering, rejects an unsupported status with
+`400 INVALID_FILTER`, and honours the `empty` / `slow` / `list-error` / `list-error-once` scenarios.
+`POST /api/sessions` validates the body, resolves the coach, inserts a `scheduled` record with a
+`ses_9xx` id, and answers `201` with a `SessionDetails`; a created session survives the next list
+read. The `/sessions` workspace renders all four list states (loading, empty, error with a working
+`Try again`, populated), an `All` + `Scheduled` status filter that owns its value in the page URL,
+and a create form with inline validation, a disabled pending submit, and close-on-success. The full
+path is `UI -> feature model hook -> services/api/endpoints/sessions.ts -> services/api/http.ts`;
+no feature file calls `fetch`.
+
+**Deviations from the plan, both deliberate and small.**
+
+1. `SessionsList` renders `t("list.startUnknown")` when `formatSessionStart` returns `""`, instead
+   of emitting an empty `<time>`. The plan's T12 snippet omitted this, but the review-remediation
+   pass added the key for exactly this consumer ("No consumer renders it yet — T12 will"). No test
+   asserts it, because producing an unparseable `startsAt` would require overriding the handler to
+   serve a malformed row; the branch is a two-line guard over an already-tested helper.
+2. The seed shifts `ses_104` and `ses_105` from 2027 to 2026 so `cancelled` and `completed` sit in
+   the past, as the plan's own deviation note requires. AC-02's probe value is untouched.
+
+**Checks run after the edits, in this order.** `npm run lint:fix` (10 files reformatted — import
+ordering only, no logic touched), then `npm run lint` clean over 66 files; `npm run typecheck`
+clean; `npm run test` **15 files, 88 tests, all passing** — matching the plan's expected count for
+T14; `npm run build` clean (382.68 kB / 122.31 kB gzip). Nothing was repaired by hand and no
+dependency or configuration was changed.
+
+**Layer assertions re-run at the end.** `@/mocks` and `@/test` appear in no production file under
+`src/app`, `src/features`, `src/services`, `src/shared` (colocated tests reach the boundary only
+through `@/test/msw`); no file outside `src/app` imports `@/app`; `fetch(` appears in no file under
+`src/features` (the one grep hit is `query.refetch()`); no `useMemo`, `useCallback`, or `React.memo`
+was introduced.
+
+**Unverified state and remaining risk.**
+
+* **No browser observation.** T15 was out of the requested scope, so `npm run dev` was not started
+  and the `?mock=` scenario switch, which reads the real page URL, has never been exercised against
+  a running worker. A memory router cannot observe it; the T13 filter test documents this rather
+  than covering it. `browser-verify` is now applicable for the first time.
+* **The seed's future/past assertion is a time bomb.** `sessions.seed.test.ts` asserts that
+  `scheduled` and `full` sit in the future; that test starts failing after 2027-08-03. This is the
+  accepted consequence of D-03 and is recorded here as the plan's T15 asks.
+* **Nothing in `specs/` was written.** The directory still does not exist and this pass establishes
+  no durable truth beyond the task.
+* The `listErrorOnceUsed` latch in `src/mocks/scenario.ts` still has no programmatic reset, so the
+  `list-error-once` scenario is a per-page-load behavior only, unchanged from the previous pass.
+
+**Stop.** Scoped behavior for T3-T6 and T10-T14 is complete and its essential tests pass; no check
+exposed a specialist problem and no decision was left unresolved. Per the Stop Contract this role
+does not invoke the next command. The natural next steps are the developer's commits, then
+`browser-verify` for the manual observation and `verify` / `code-reviewer` for T15's gates.
+
 ## Manual Browser Observation
 
 - Command and URL: `<actual command and discovered URL>`

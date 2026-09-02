@@ -1,4 +1,5 @@
-import { createBrowserRouter, type RouteObject } from "react-router";
+import { createBrowserRouter, type RouteObject, redirect } from "react-router";
+import { SessionsWorkspacePage } from "@/features/sessions";
 import { AppLayout } from "./AppLayout";
 
 export const routes: RouteObject[] = [
@@ -7,7 +8,8 @@ export const routes: RouteObject[] = [
 		element: <AppLayout />,
 		children: [
 			// Feature routes are registered here.
-			{ index: true, element: null },
+			{ index: true, loader: () => redirect("/sessions") },
+			{ path: "sessions", element: <SessionsWorkspacePage /> },
 		],
 	},
 ];
