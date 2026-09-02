@@ -2,7 +2,7 @@
 
 Task: `task-001-onboarding-sessions`
 
-Developer: `igor2000xp <dev@atomicactions.io>`
+Developer: `igor2000xp <igor.aniskevich@innowise.com>`
 
 Active work started: `2026-09-02T04:18+02:00`
 
