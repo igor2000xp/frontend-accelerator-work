@@ -1,0 +1,9 @@
+dist
+public
+toolchain
+rulesets
+.claude
+.agents
+.codex
+.frontend-accelerator
+node_modules

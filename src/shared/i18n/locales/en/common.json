@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Training Sessions Workspace",
+    "tagline": "Plan and review basketball training sessions."
+  },
+  "state": {
+    "loading": "Loading…",
+    "empty": "Nothing to show yet."
+  },
+  "action": {
+    "retry": "Try again",
+    "cancel": "Cancel"
+  },
+  "error": {
+    "generic": "Something went wrong. Please try again."
+  }
+}

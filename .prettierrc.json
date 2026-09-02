@@ -1,0 +1,23 @@
+{
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "singleQuote": false,
+  "overrides": [
+    {
+      "files": ["*.js", "*.jsx", "*.ts", "*.tsx", "*.mjs", "*.cjs"],
+      "options": {
+        "useTabs": true,
+        "tabWidth": 4,
+        "singleQuote": false
+      }
+    },
+    {
+      "files": ["*.json", "*.jsonc", "*.css", "*.md"],
+      "options": {
+        "useTabs": false,
+        "tabWidth": 2
+      }
+    }
+  ]
+}
