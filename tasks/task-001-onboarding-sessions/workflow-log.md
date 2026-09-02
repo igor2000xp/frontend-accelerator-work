@@ -38,6 +38,8 @@ Doctor evidence at start: `training/frontend-accelerator-onboarding/workflow-log
 | `2026-09-02T18:29+02:00` | `browser-verify` | `Запусти команду browser-verify, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **NOT-APPLICABLE**. Project Doctor gate passed (`capability:browser agent-browser@0.32.3 ready`, all eight checks `PASS`), so the role was not `BLOCKED`. Server discovery found no running dev server and no configured port. The developer was asked for the required approval to start one and declined, on the ground that the generated code has no browser surface yet. No server started, no adapter session opened, no production code touched. Role STOPped. | `not started — developer declined the dev server` | `re-run browser-verify after T12-T14 land the routed /sessions workspace and its UI` |
 | `2026-09-02T19:08+02:00` | `code-reviewer` (re-review) | `Запусти команду /code-reviewer, проверить сгенерированный код. После выполнения команды Stop command end make a record in the workflow-log.md file.` | Verdict **PASS**. Bounded read-only re-review of the review-remediation diff (6 files in `src/`). Verified resolution of R-01 (date rollover rejected via component bounds & normalization checks), R-02 (`formatSessionStart` non-throwing fallback returning `""` with `list.startUnknown` locale keys), and R-03 (`SessionStatus` derived from `SESSION_STATUSES`). 14 new tests added. All gates (`lint`, `typecheck`, `test`, `build`) pass cleanly. Residual gaps: route-level `errorElement` and downstream mock/UI tasks remain. Role STOPped. | `pending developer review` | `developer go-ahead, then re-dispatch coder for T2 (src/mocks/scenario.ts)` |
 | `2026-09-02T19:23+02:00` | `coder` (log correction) | `After completing the command, stop it and log the action in the workflow-log.md file.` | Verified that the remediation pass had already STOPped and been recorded, then found and fixed a defect in this log: the `api-integration` revision 2 row and record were stamped `19:05`, placing the contract amendment after the `18:55` coder pass that implements it. Restamped to the evidence-backed range `18:40-18:53` (first review `18:37`; remediation Vitest `Start at 18:54:09`). Documentation-only; no source file, contract, or verdict touched. Recorded as correction 4 below. | `pending developer review` | `developer go-ahead, then re-dispatch coder for T2 (src/mocks/scenario.ts)` |
+| `2026-09-02T19:34+02:00` | `verify` (T1-T2, T7-T9 pass) | `Launch the command 'verify' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Four applicable project-defined checks run read-only from the Application Root against clean tree `1dababc`: `npm run lint`, `npm run typecheck`, `npm run test` (6 files, 44 tests), `npm run build` — every one exits `0`. `npm run format` and `lint:fix` excluded as state-writing; e2e `NOT-APPLICABLE` (no Playwright/Cypress config). Tree byte-identical after the run. Scope caveat: the verdict evidences no sessions acceptance criterion — `handlers.ts` is still an empty array and the router index renders `null`. No failure repaired, no dependency installed, no file edited. Role STOPped after the verdict. | `pending developer review` | `coder` for T3-T6 (MSW handlers + seed), then T10-T14 (routed workspace) |
+| `2026-09-02T19:44+02:00` | `code-reviewer` (T2, T9 pass) | `/code-reviewer Launch the command '/code-review' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Bounded read-only review of `340100a..b521743` restricted to `src/` (4 files: `scenario.ts`, `scenario.test.ts`, `create-session.ts`, `create-session.test.ts`, 255 insertions). Validated `MockScenario` definitions, URL search param reading, `shouldFailListRequest` latching, canned error bodies, `validateCreateSessionForm` (AC-15/AC-16/AC-17), `buildCreateSessionRequest` (A-04, D-02), and `hasFormErrors`. Zero blocking or should-fix defects. All four project gates pass (44/44 tests). Role STOPped. | `pending developer review` | `coder` for T3-T6 (MSW handlers, seed, in-memory store) then T10-T14 (routed workspace UI) |
 
 Add one row for each role invocation or important correction. Preserve each prompt exactly, but do
 not copy full role responses into this file.
@@ -793,6 +795,111 @@ Review surface, stated explicitly: bounded diff of the remediation pass against 
 * **Downstream Tasks:** Mock handlers (T2–T6) and UI presentation/forms (T9–T14) have not yet landed.
 
 Recommended next role: `coder` for T2 (`src/mocks/scenario.ts`).
+
+### Verification Record — `verify` role, T1-T2 / T7-T9 pass
+
+Verified `2026-09-02T19:34+02:00`, read-only. No file was created, edited, or repaired; no
+dependency installed; no configuration or lockfile touched.
+
+**Context resolution.** One `package.json` at the Repository Root and no nested manifests, so the
+Application Root *is* the Repository Root and no monorepo disambiguation was required. Package
+manager resolved from evidence rather than assumption: `package-lock.json` is present,
+`pnpm-lock.yaml` and `yarn.lock` are absent, which matches the NPM-only rule in `AGENTS.md`.
+`packageManager` is unset in the manifest — worth noting but not blocking.
+
+**Check selection.** Nine scripts exist; four are applicable read-only verification checks. The
+selection and its exclusions:
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `npm run lint` (`biome check .`) | `0` | 44 files checked, no fixes applied |
+| `npm run typecheck` (`tsc -b --noEmit`) | `0` | no diagnostics |
+| `npm run test` (`vitest run`) | `0` | 6 files, 44 tests, all passing |
+| `npm run build` (`tsc -b && vite build`) | `0` | built in ~0.8s; 364.20 kB JS / 12.92 kB CSS |
+| `npm run format` | not run | **excluded**: `biome format --write` rewrites source files |
+| `npm run lint:fix` | not run | **excluded**: `biome check --write` rewrites source files |
+| `npm run dev` / `preview` | not run | long-running servers, not verification checks |
+| e2e | not run | `NOT-APPLICABLE` — no Playwright or Cypress config in the repository |
+
+Exit codes were captured directly from each command rather than inferred from output text. A first
+attempt read `$PIPESTATUS` through an intervening `echo`, which silently lost the value and printed
+an empty `EXIT=`; the run was repeated capturing `$?` per command so every code above is observed,
+not assumed.
+
+**Read-only confirmed by evidence, not assertion.** The tree was clean at `1dababc` before the run
+and byte-identical after it (`git status --short` empty, `HEAD` unmoved). `npm run build` does write,
+but only to `dist/`, which `.gitignore:6` excludes — checked before running rather than assumed.
+
+**The suite was inspected, not just counted.** A green total can hide vacuous or skipped tests, so
+the run was repeated with `--reporter=verbose`: all 44 are named, substantive, and none is skipped
+or todo. They cover the transport types, the A-01 validity table including both cases added beyond
+the review's list, the A-02 non-throwing render path, `create-session` validation and defaults, the
+`?mock=` scenario switch, i18n `en`/`ru` key parity, and one app-shell smoke test.
+
+**Scope of this verdict — read this before treating `PASS` as done.** `PASS` covers exactly the four
+commands above against the current tree. It evidences **no sessions acceptance criterion**. AC-01 to
+AC-21 all need the list, the filter, or the create form, and none is reachable: `src/mocks/handlers.ts`
+is still `export const handlers: RequestHandler[] = []`, so no `/api/sessions` request is served, and
+`src/app/router.tsx:10` still renders `{ index: true, element: null }` with no `/sessions` route. The
+implemented surface is model, type, mock-scenario, and i18n code with unit coverage — correct for the
+tasks completed, and not yet a working feature. Anyone reading this `PASS` as "the onboarding flow
+works" would be misreading it.
+
+**Not re-verified here.** The `code-reviewer` `PASS` at `19:08` covered the remediation diff; this
+role does not re-review code, and a passing gate is not a substitute for that review. The DST
+behavior preserved by A-01 remains unpinned by the suite by deliberate design (machine-zone
+dependent), so these green tests do not evidence it.
+
+**Next.** `coder` for T3-T6 (MSW handlers, seed data, the in-memory store) and then T10-T14 (the
+routed workspace and its UI). `browser-verify` stays not-applicable until `/sessions` renders.
+
+### Code Review Record — `code-reviewer` role, T2 and T9 pass
+
+Reviewed `2026-09-02T19:44+02:00`, read-only evidence-based review.
+
+**Review surface:** Bounded diff `340100a..b521743` restricted to `src/` (4 files, 255 insertions: `src/mocks/scenario.ts`, `src/mocks/scenario.test.ts`, `src/features/sessions/model/create-session.ts`, `src/features/sessions/model/create-session.test.ts`). Rulesets loaded: `rulesets/common/code-reviewer` (Evidence-First Review) and `rulesets/framework/code-reviewer`.
+
+**Verdict: `PASS`.**
+
+#### Findings
+
+No blocking or should-fix findings.
+
+#### Detailed Code Analysis
+
+1. **`src/mocks/scenario.ts` & `src/mocks/scenario.test.ts` (T2 / FR-03 / Q-07):**
+   - `MockScenario` union and `MOCK_SCENARIOS` constant match the contract (`"normal" | "empty" | "slow" | "list-error" | "list-error-once" | "create-error"`).
+   - `currentScenario()` safely handles server/Node runtime (`typeof window === "undefined"`) and parses the page URL's `?mock=` search parameter with fallback to `"normal"`.
+   - `shouldFailListRequest(scenario)` correctly implements the single-fire latch for `"list-error-once"` and continuous error for `"list-error"`.
+   - `LIST_ERROR_BODY` and `CREATE_ERROR_BODY` are typed against `ApiErrorBody` with exact contract codes (`"SESSIONS_UNAVAILABLE"`, `"CREATE_SESSION_FAILED"`).
+   - Unit tests thoroughly cover default, valid scenario param, invalid fallback, latch state behavior, and canned error structures.
+
+2. **`src/features/sessions/model/create-session.ts` & `src/features/sessions/model/create-session.test.ts` (T9 / AC-14..AC-17 / D-02 / A-04):**
+   - Boundaries `TITLE_MIN_LENGTH = 3` and `TITLE_MAX_LENGTH = 80` enforced on trimmed title.
+   - `CREATE_SESSION_DEFAULTS` holds the 7 fixed contract fields specified by D-02 and satisfies `Omit<CreateSessionRequest, "title" | "startsAt">`.
+   - `CreateSessionFieldError` returns i18n key suffixes (`"titleLength" | "startsAtRequired" | "startsAtFuture"`), preserving the zero-hardcoded-strings rule and matching `src/shared/i18n/locales/{en,ru}/sessions.json` keys under `form.validation.*`.
+   - `validateCreateSessionForm` distinguishes missing start (`startsAtRequired`) from past or invalid calendar start (`startsAtFuture`) using `isFutureLocalDateTime`.
+   - `buildCreateSessionRequest` trims title, verifies parsed local date validity (throwing if called with unvalidated input), converts to ISO 8601 UTC via `toIsoUtcSeconds`, and bundles default fields.
+   - Tests comprehensively verify 3 and 80 character boundaries, whitespace trimming, past/missing dates, and request object generation.
+
+3. **Architecture & layer boundaries:**
+   - `create-session.ts` strictly imports from `@/services/api/endpoints/sessions.types` and sibling `./date-time`.
+   - `scenario.ts` imports only `type { ApiErrorBody }` from `@/services/api/endpoints/sessions.types`.
+   - Zero illegal imports from `app`, `mocks`, or `test` into feature/service layers.
+
+4. **Quality gates verified:**
+   - `npm run lint` — Biome clean (44 files checked, 0 errors).
+   - `npm run typecheck` — TypeScript strict clean (`tsc -b --noEmit`).
+   - `npm run test` — 6 test files, 44 tests pass.
+   - `npm run build` — Production build clean.
+
+#### Residual gaps and risks (non-blocking)
+
+* **Downstream Handlers & Store (T3–T6):** `src/mocks/handlers.ts` is still empty; MSW integration and in-memory store (`sessions-db.ts`) remain to be implemented.
+* **Downstream UI & Routing (T10–T14):** Workspace components (`/sessions` route, list, filter, form UI) have not yet been wired.
+* **Scenario Latch Scope:** `listErrorOnceUsed` in `scenario.ts` is module-scoped without a programmatic reset export; harmless as tests use `server.use({ once: true })` per specification, while browser creates a fresh module instance per page load.
+
+Recommended next role: `coder` for T3–T6 (`src/mocks/data/sessions.seed.ts`, `src/mocks/db/sessions-db.ts`, `src/mocks/handlers.ts`, `src/services/api/endpoints/sessions.ts`, `src/test/msw.ts`).
 
 ## Manual Browser Observation
 
