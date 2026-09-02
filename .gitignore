@@ -6,3 +6,5 @@ npm-debug.log*
 dist/
 *.local
 coverage/
+test-results/
+playwright-report/

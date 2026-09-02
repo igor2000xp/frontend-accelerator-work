@@ -46,6 +46,7 @@ Doctor evidence at start: `training/frontend-accelerator-onboarding/workflow-log
 | `2026-09-02T20:37+02:00` | `coder` (F-01 fix) | `Fix F-01 list-error-once attempt window` | `src/mocks/scenario.ts` attempt window (`LIST_ERROR_ONCE_ATTEMPT_MS = 500`) implemented; 5 unit tests added in `src/mocks/scenario.test.ts` (92 tests total). Proven in real browser: `500` -> error state -> `Try again` -> `200` -> 5 rows. Role STOPped. | `pending developer review` | `browser-verify` for independent re-check |
 | `2026-09-02T20:45+02:00` | `browser-verify` (F-01 re-check) | `Launch the command 'browser-verify' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. F-01 verified closed across 3/3 loads. Full regression sweep passed in real browser (desktop 1280x900, mobile 375x812). Measured retry dead zone ~500ms (self-correcting on next click). Role STOPped. | `pending developer review` | `code-reviewer` |
 | `2026-09-02T20:54+02:00` | `code-reviewer` (full workspace implementation & F-01 fix) | `/code-reviewer Launch the command '/code-review' to check the implemented code. After completing the command, execute the 'Stop' command and record the results in the workflow-log.md file.` | Verdict **PASS**. Bounded read-only review of `b521743..working tree` restricted to `src/` (27 files, 1477 insertions, 6 deletions, plus F-01 scenario window update). Verified compliance with AC-01..AC-27 (AC-22 dropped), ED layer rules, zero hardcoded strings, no unauthorized hooks/dependencies. All four quality gates pass cleanly (92/92 tests, lint, typecheck, build). Residual non-blocking items noted. Role STOPped. | `pending developer review` | `docs-generator` / `finishing-branch` |
+| `2026-09-02T22:00+02:00` | `coder / test-generator` (e2e) | `Add package.json start and test:e2e scripts, configure Playwright, and create full-flow e2e test` | `@playwright/test` installed; `playwright.config.ts` and `e2e/sessions.spec.ts` implemented; `npm run test:e2e` passes (1/1 passed). All quality gates pass (lint, typecheck, unit tests, e2e, build). | `accept` | `document e2e test report in workflow-log.md` |
 
 Add one row for each role invocation or important correction. Preserve each prompt exactly, but do
 not copy full role responses into this file.
@@ -1611,3 +1612,65 @@ starts, not yet resolved anywhere in `ai/context/` or a task folder:
   `training/frontend-accelerator-assessment/fixtures/fixture-clock.json`; task-001's D-03
   explicitly deferred that in favor of static future-dated seeds. `task-002` (search/filter) does
   not force this question, but `task-003`'s `created`/`last-updated` detail timestamps likely will.
+
+### End-to-End Test Report: Training Sessions Workspace
+
+**Test Suite:** `e2e/sessions.spec.ts`  
+**Test Case:** `Training Sessions Workspace › allows viewing, filtering, and creating training sessions`  
+**Framework & Runner:** `@playwright/test` (v1.58.0)  
+**Configuration:** [`playwright.config.ts`](../../playwright.config.ts) (Chromium project, `testDir: "./e2e"`, local `webServer: "npm run dev"`)  
+**Execution Command:** `npm run test:e2e` (`playwright test`)  
+**Verdict:** **PASS** (1 test passed in 1.8s)
+
+#### 1. Purpose & Scope
+
+This end-to-end test automates and validates the full mandatory user flow for the Training Sessions Workspace in a real browser environment, verifying integration across all application layers (`src/app`, `src/features/sessions`, `src/services/api`, `src/shared/i18n`, and `src/mocks`).
+
+#### 2. Detailed Step-by-Step Test Breakdown
+
+1. **Root Navigation & Client-Side Redirect (AC-27, D-04):**
+   - **Action:** Navigates to `http://localhost:5173/`.
+   - **Assertion:** Expects URL to update to `/sessions` via client-side redirect (`<Navigate to="/sessions" replace />`).
+
+2. **Session Listing & Initial Render (AC-01, AC-02, AC-09, AC-10):**
+   - **Action:** Waits for TanStack Query and MSW request handler `GET /api/sessions` to settle.
+   - **Assertions:**
+     - Layout heading `<h1>Training Sessions Workspace</h1>` and section heading `<h2>Training sessions</h2>` are visible.
+     - Seeded session titles (e.g., `"U14 Shooting Lab"`, `"Varsity Defense Intensive"`) are rendered in the DOM.
+
+3. **Status Filtering (AC-08, AC-10, AC-11, D-01):**
+   - **Action:** Interacts with the Status `<select>` element (`getByLabel("Status")`), selecting the option `"scheduled"`.
+   - **Assertions:**
+     - URL search parameters update to `?status=scheduled`.
+     - Scheduled sessions (`"U14 Shooting Lab"`, `"Private Footwork Review"`) remain visible.
+     - Sessions with other statuses (e.g., `"Varsity Defense Intensive"` with status `"full"`) are filtered out and not visible.
+   - **Action (Reset):** Selects the `"all"` option.
+   - **Assertion:** `"Varsity Defense Intensive"` reappears in the list.
+
+4. **Opening the Create Session Form (AC-13):**
+   - **Action:** Clicks the `"New session"` button (`getByRole("button", { name: "New session" })`).
+   - **Assertion:** Form mounts and displays the heading `<h3>Create a session</h3>`.
+
+5. **Form Input and Submission (AC-14, AC-15, AC-16, AC-17, D-02):**
+   - **Action:** Fills the Title input (`getByLabel("Title")`) with a valid 3-80 character string: `"Elite Dribbling Clinic"`.
+   - **Action:** Fills the Start Date & Time input (`getByLabel("Start date and time")`) with a future ISO local string: `"2028-10-15T14:30"`.
+   - **Action:** Clicks `"Create session"` (`getByRole("button", { name: "Create session" })`).
+
+6. **Form Reset, Invalidation & List Update (AC-12, AC-20, AC-21, D-05):**
+   - **Action:** TanStack Query issues `POST /api/sessions`, MSW store inserts the record and responds with status `201 Created`. Query invalidation triggers `GET /api/sessions`.
+   - **Assertions:**
+     - Form unmounts/closes (`<h3>Create a session</h3>` is not visible).
+     - Newly created session `"Elite Dribbling Clinic"` appears in the visible sessions list.
+
+#### 3. Execution Verification Evidence
+
+```text
+> frontend-accelerator-work@0.0.0 test:e2e
+> playwright test
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › e2e/sessions.spec.ts:4:2 › Training Sessions Workspace › allows viewing, filtering, and creating training sessions (507ms)
+
+  1 passed (1.8s)
+```
