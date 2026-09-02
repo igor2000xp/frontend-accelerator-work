@@ -45,10 +45,14 @@ src/
 ├── index.css      # Global stylesheet (Tailwind entry)
 ├── app/           # Global composition, wiring, and app entry point
 ├── features/      # Product-facing, independent functional slices
+│   └── sessions/  # Training sessions workspace (ui/ + model/ + index.ts barrel)
 ├── services/      # Shared cross-feature business capabilities (API, settings, auth)
+│   └── api/       # http.ts client + endpoints/sessions.ts wrappers and contract types
 ├── shared/        # Generic UI primitives, helpers, and configurations (last resort)
-├── mocks/         # MSW request handlers and worker/server setup (infrastructure)
-└── test/          # Vitest global setup (infrastructure)
+│   ├── i18n/      # i18next runtime and en/ru locale files
+│   └── lib/       # Tiny generic utilities (cn.ts)
+├── mocks/         # MSW handlers, seed data, in-memory store, scenario switch (infrastructure)
+└── test/          # Vitest setup and shared test helpers (infrastructure)
 ```
 
 The four architectural layers are `app`, `features`, `services`, and `shared`. `mocks/` and
@@ -110,7 +114,8 @@ The four architectural layers are `app`, `features`, `services`, and `shared`. `
 
 **What belongs here:**
 
-- UI primitives (shadcn/ui components are generated into `src/shared/ui/`).
+- UI primitives (shadcn/ui components are generated into `src/shared/ui/`; none have been
+  generated yet, so that directory does not exist today).
 - Tiny generic utilities (e.g. `src/shared/lib/cn.ts`).
 - The i18n runtime and locale files (`src/shared/i18n/`).
 - Stable configuration and system-wide constants.
@@ -143,13 +148,21 @@ These directories sit outside the four layers and follow their own rules.
 - `browser.ts` starts the service worker in development only (called from `main.tsx`).
   The worker script lives at `public/mockServiceWorker.js`.
 - `server.ts` creates the node server used by tests.
+- `data/` holds deterministic seed fixtures (`sessions.seed.ts`), `db/` holds the module-scoped
+  in-memory store (`sessions-db.ts`) that the handlers read and write. Store state resets on a
+  page reload in the browser and through `resetSessionsDb()` in tests.
+- `scenario.ts` implements the `?mock=<scenario>` page-URL switch (`normal`, `empty`, `slow`,
+  `list-error`, `list-error-once`, `create-error`). It reads `window.location`, never the request
+  URL, so no scenario name ever reaches presentation code.
 - Handlers may import types and constants from `services/` and `shared/` to stay aligned with
   the real API contract. Nothing under `app/`, `features/`, `services/`, or `shared/` may
   import from `mocks/`.
 
 **`src/test/setup.ts`** wires the MSW node server into Vitest with `onUnhandledRequest: "error"`,
-so any request a test does not mock fails loudly. Tests are colocated with the code they cover
-and matched by `src/**/*.{test,spec}.{ts,tsx}`.
+so any request a test does not mock fails loudly. `src/test/msw.ts` is the only way a test reaches
+that server (per-test overrides with `{ once: true }`), and `src/test/render-app.tsx` renders a
+route inside the real providers. Tests are colocated with the code they cover and matched by
+`src/**/*.{test,spec}.{ts,tsx}`.
 
 ## 6. The Public API (Barrel Import) Rule
 
@@ -259,18 +272,20 @@ Currently present:
 
 - `ai/context/product.md`: product purpose, target users, core flows, priorities, and
   out-of-scope boundaries.
+- `ai/context/business-rules.md`: validation limits, statuses, and the client/mock split that
+  must hold across all screens and code.
+- `ai/context/glossary.md`: shared naming between the business domain, API contract, and code.
+- `ai/context/current-work.md`: active work, delivered scope, and handoff notes.
+- `ai/context/features/sessions.md`: the sessions feature passport: route, API dependencies,
+  state ownership, user-visible states, and edge cases.
 
 Planned files (create them when the corresponding knowledge first appears):
 
-- `ai/context/business-rules.md`: validation limits, statuses, and permissions that must hold
-  across all screens and code.
-- `ai/context/glossary.md`: shared naming between the business domain, API contracts, and code.
-- `ai/context/roadmap.md`: what is being built Now, Next, and Later.
-- `ai/context/current-work.md`: active work, recent commits, blockers, and handoff notes.
-- `ai/context/features/<feature>.md`: a feature's passport: routes, API dependencies, local
-  state, and edge cases.
+- `ai/context/roadmap.md`: what is being built Now, Next, and Later. Until it exists, the
+  Now/Next/Later list lives in `product.md`.
 - `ai/context/decisions/*.md`: Architectural Decision Records (ADRs) recording why a technical
-  path was chosen, with alternatives and trade-offs.
+  path was chosen, with alternatives and trade-offs. Until they exist, per-task decisions are
+  recorded in `tasks/<task-id>/workflow-log.md`.
 
 ## 10. "Where Should This Code Go?" Quick Decision Matrix
 

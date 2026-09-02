@@ -53,13 +53,15 @@ replacing fragmented spreadsheets, calendars, and text messages.
 
 ## Current Priorities (Now / Next / Later)
 
-* **Now:** onboarding task `task-001-onboarding-sessions` — sessions list loaded from the mock
-  API, one status filter plus `All`, and a create form (title 3–80 characters, future
-  date/time) with loading and error states.
+* **Delivered:** onboarding task `task-001-onboarding-sessions` — the `/sessions` workspace
+  lists sessions from the mock API, offers `All` plus the `Scheduled` status filter (mirrored
+  into the `?status=` URL parameter), and creates sessions through a form validating a trimmed
+  3–80 character title and a strictly future start time, with loading, empty, and error states.
+  A failed create shows no message by design (decision D-06); the form stays open and editable.
 * **Next:** the broader assessment scope — search by title/coach/location, all four status
   filters, and the session details side drawer.
-* **Later:** optional extensions such as URL parameter synchronization, pagination, and
-  optimistic updates.
+* **Later:** optional extensions such as pagination and optimistic updates. URL parameter
+  synchronization is no longer deferred: the status filter already round-trips through the URL.
 
 ## Explicit Out-of-Scope (Non-Goals)
 

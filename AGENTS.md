@@ -10,13 +10,15 @@ sessions workspace for a basketball academy (see `ai/context/product.md`).
 * `.claude/skills/` — accelerator role skills (`requirements-analyst`, `writing-plans`, `coder`,
   `code-reviewer`, `verify`, plus optional `architect`, `api-integration`, `ui-designer`,
   `test-generator`, `debugger`, `browser-verify`, `docs-generator`)
-* `ai/context/` — persistent project memory. Only `product.md` exists today; add business
-  rules, glossary, roadmap, current-work, and feature files as that knowledge appears
+* `ai/context/` — persistent project memory: `product.md`, `business-rules.md`, `glossary.md`,
+  `current-work.md`, and `features/<feature>.md`. Add roadmap and decision records as that
+  knowledge appears
 * `tasks/<task-id>/` — the active task brief and its role artifacts
 * `training/` — onboarding task, assessment spec, API contract, and mocking guide
 
-There is no example feature module yet. `src/app/` is the only wired layer; use the feature
-layout in `ARCHITECTURE.md` section 7 when creating the first one.
+`src/features/sessions/` is the reference feature module: it shows the `ui/` + `model/` +
+`index.ts` layout from `ARCHITECTURE.md` section 7, TanStack Query hooks over typed endpoint
+wrappers, and colocated behavior tests. Follow it when creating the next feature.
 
 ## Tech Stack
 
@@ -48,6 +50,7 @@ layout in `ARCHITECTURE.md` section 7 when creating the first one.
 * `npm run build` — `tsc -b && vite build`
 * `npm run lint` / `npm run lint:fix` — Biome check
 * `npm run format` — Biome format
+* `npm run preview` — serve the production build
 * `npm run typecheck` — `tsc -b --noEmit`
 * `npm run test` / `npm run test:watch` — Vitest
 
@@ -69,7 +72,8 @@ layout in `ARCHITECTURE.md` section 7 when creating the first one.
 ## Styling
 
 * Tailwind CSS 4 utility classes + `cn()` utility (`src/shared/lib/cn.ts`)
-* shadcn/ui components live in `src/shared/ui/`
+* shadcn/ui components live in `src/shared/ui/` (nothing generated there yet — the current
+  feature uses plain Tailwind-styled elements)
 * Global stylesheet: `src/index.css`
 * No Material UI (MUI), styled-components, or CSS modules
 
