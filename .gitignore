@@ -3,3 +3,8 @@ npm-debug.log*
 *.tmp
 .DS_Store
 **/.DS_Store
+dist/
+*.local
+coverage/
+test-results/
+playwright-report/
